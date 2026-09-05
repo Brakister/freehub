@@ -5,8 +5,10 @@ Voz estilo Discord: servidor Socket.IO + WebRTC mesh + desktop Electron.
 - Salas de voz com código de 6 caracteres (até 6 pessoas)
 - WebRTC P2P (mesh) com STUN público
 - Indicador de quem está falando (VAD local + remoto)
-- Compartilhamento de tela, mudo, volumes, teste de microfone
+- Compartilhamento de tela com **áudio do sistema** e opções de qualidade (720p→4K)
+- Mudo, volumes, teste de microfone, servidor de voz configurável
 - Auto-update via GitHub Releases
+- O instalador **já embute o servidor**: é só abrir o app (ouve em `localhost:3001`)
 
 ## Estrutura
 
@@ -14,10 +16,17 @@ Voz estilo Discord: servidor Socket.IO + WebRTC mesh + desktop Electron.
 packages/shared   tipos, eventos, validação (bundle ESM)
 packages/webrtc   WebRTC: VAD, mic test, volume, PeerManager mesh
 packages/ui       Sidebar, VoicePanel, SettingsModal, store de settings
-apps/server       Express + Socket.IO + SQLite (porta 3001)
-apps/desktop      Electron + Vite + React + zustand
+apps/server       Express + Socket.IO + SQLite (porta 3001) — standalone via npm
+apps/desktop      Electron + Vite + React + zustand + servidor embutido (sql.js)
 scripts/          test-server.ts, tunnel.ps1
 ```
+
+## Usar o instalador
+
+Instale o `Freehub Setup x.y.z.exe` e abra o app: ele inicia sozinho um servidor
+de voz em `http://localhost:3001` e conecta. Crie/entre numa sala pelo código.
+
+Para falar com gente de outras redes, veja a próxima seção.
 
 ## Rodar em dev
 
@@ -33,18 +42,18 @@ O servidor de sinalização precisa estar acessível — não engane com `localh
 A forma mais fácil e 100% gratuita é um **túnel Cloudflare** (sem conta, sem
 port forwarding):
 
-1. Rode o servidor numa máquina:
-   ```bash
-   npm run dev:server
-   ```
-2. Nessa mesma máquina (outro terminal), publique a porta 3001 publicamente:
+1. Uma pessoa (o anfitrião) abre o **Freehub** (o servidor embutido sobe sozinho)
+   — ou, em dev, rode `npm run dev:server`.
+2. Na máquina do anfitrião, exponha a porta 3001 publicamente:
    ```bash
    npm run tunnel:server
    ```
+   (O script baixa o `cloudflared.exe` sozinho. Sem npm? Baixe o binário do
+   Cloudflare e rode `cloudflared tunnel --url http://localhost:3001`.)
 3. Copie a URL `https://xxxx.trycloudflare.com` impressa pelo túnel.
-4. Cada pessoa (em casa, em outra rede) abre o Freehub →
+4. Cada pessoa, de qualquer rede, abre o Freehub →
    **Configurações → Servidor de voz (URL)** → cola a URL → a conexão é refeita
-   automaticamente e ela pode entrar com o código da sala.
+   automaticamente e ela entra com o código da sala.
 
 Observações:
 - A URL `trycloudflare.com` muda a cada reinício do túnel. Para uma URL fixa,
