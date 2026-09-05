@@ -8,7 +8,7 @@ Voz estilo Discord: servidor Socket.IO + WebRTC mesh + desktop Electron.
 - Compartilhamento de tela com **áudio do sistema** e opções de qualidade (720p→4K)
 - Mudo, volumes, teste de microfone, servidor de voz configurável
 - Auto-update via GitHub Releases
-- O instalador **já embute o servidor**: é só abrir o app (ouve em `localhost:3001`)
+- O instalador conecta automaticamente ao servidor público grátis do Render
 
 ## Estrutura
 
@@ -23,8 +23,8 @@ scripts/          test-server.ts, tunnel.ps1
 
 ## Usar o instalador
 
-Instale o `Freehub Setup x.y.z.exe` e abra o app: ele inicia sozinho um servidor
-de voz em `http://localhost:3001` e conecta. Crie/entre numa sala pelo código.
+Instale o `Freehub Setup x.y.z.exe` e abra o app: ele conecta automaticamente ao
+servidor público. Crie uma sala ou entre usando o código, sem configurar URL.
 
 Para falar com gente de outras redes, veja a próxima seção.
 

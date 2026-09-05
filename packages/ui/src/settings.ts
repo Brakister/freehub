@@ -10,7 +10,7 @@ export interface Settings {
   micGain: number;
   /** Volume do alto-falante (0..1). */
   speakerVolume: number;
-  /** URL do servidor de voz. Vazio = padrão (localhost). */
+  /** URL do servidor de voz. Vazio = servidor público padrão. */
   serverUrl: string;
   /** Qualidade da tela compartilhada (id em SCREEN_QUALITIES). */
   screenQualityId: string;

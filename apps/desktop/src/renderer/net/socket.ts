@@ -1,7 +1,8 @@
 import { io, type Socket } from 'socket.io-client';
 import { useSettings } from '@freehub/ui';
 
-const DEFAULT_SERVER_URL = (import.meta.env.VITE_SERVER_URL ?? 'http://localhost:3001') as string;
+const DEFAULT_SERVER_URL =
+  (import.meta.env.VITE_SERVER_URL ?? 'https://freehub-server-i2sp.onrender.com') as string;
 
 let socket: Socket | null = null;
 let socketUrl = '';
