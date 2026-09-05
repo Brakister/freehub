@@ -9,6 +9,7 @@
   "asar": true,
   "win": {
     "target": ["nsis"],
+    "signAndEditExecutable": false,
     "publish": [
       {
         "provider": "github",
