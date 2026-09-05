@@ -85,6 +85,52 @@ function RemoteAudio({
   return <audio ref={ref} style={{ display: 'none' }} />;
 }
 
+function ScreenShareCard({
+  getStream,
+  title,
+  showStop,
+  onStop,
+}: {
+  getStream: () => MediaStream | null;
+  title: string;
+  showStop: boolean;
+  onStop?: () => void;
+}): React.JSX.Element | null {
+  const ref = useRef<HTMLVideoElement>(null);
+  const [hasStream, setHasStream] = useState(false);
+  useEffect(() => {
+    const apply = (): void => {
+      const stream = getStream();
+      const el = ref.current;
+      if (stream && el && el.srcObject !== stream) el.srcObject = stream;
+      setHasStream(Boolean(stream));
+    };
+    apply();
+    const timer = setInterval(apply, 500);
+    return () => clearInterval(timer);
+  }, [getStream]);
+  if (!hasStream) return null;
+  return (
+    <div className="absolute bottom-20 right-6 z-20 w-80 overflow-hidden rounded-xl border-2 border-[#5865f2] bg-black shadow-2xl">
+      <video ref={ref} autoPlay muted playsInline className="aspect-video w-full bg-black" />
+      <div className="flex items-center justify-between gap-2 bg-[#1e1f22]/95 px-3 py-2">
+        <div className="flex items-center gap-2 text-xs font-medium text-white">
+          <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-red-500" />
+          <span className="truncate">{title}</span>
+        </div>
+        {showStop && onStop && (
+          <button
+            onClick={onStop}
+            className="shrink-0 rounded bg-[#d83c3e] px-3 py-1 text-xs font-semibold text-white transition hover:bg-[#b83234]"
+          >
+            Parar
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function App(): React.JSX.Element {
   const {
     status,
@@ -364,6 +410,24 @@ export default function App(): React.JSX.Element {
               onToggleScreenShare={() => void handleToggleScreenShare()}
               onLeaveRoom={handleLeaveRoom}
             />
+            {screenshare &&
+              (screenshare.userId === selfId ? (
+                <ScreenShareCard
+                  getStream={() => screenStreamRef.current}
+                  title="Você está transmitindo"
+                  showStop
+                  onStop={() => void handleToggleScreenShare()}
+                />
+              ) : (
+                <ScreenShareCard
+                  getStream={() => getStream(screenshare.userId)}
+                  title={
+                    (users.find((u) => u.id === screenshare.userId)?.nickname ?? 'Alguém') +
+                    ' está transmitindo'
+                  }
+                  showStop={false}
+                />
+              ))}
             {users
               .filter((u) => u.id !== selfId)
               .map((u) => (

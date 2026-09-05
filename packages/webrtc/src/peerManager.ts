@@ -73,6 +73,19 @@ export class PeerManager {
           );
           entry.stopDetector = detector.start();
         }
+      } else {
+        // Vídeo remoto (screen share): substitui o vídeo anterior e acompanha o fim.
+        for (const t of remoteStream.getVideoTracks()) {
+          if (t !== e.track) remoteStream.removeTrack(t);
+        }
+        if (!remoteStream.getTracks().includes(e.track)) remoteStream.addTrack(e.track);
+        e.track.addEventListener(
+          'ended',
+          () => {
+            if (remoteStream.getTracks().includes(e.track)) remoteStream.removeTrack(e.track);
+          },
+          { once: true },
+        );
       }
     };
 
