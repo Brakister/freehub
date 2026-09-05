@@ -1,6 +1,6 @@
 {
-  "appId": "com.discord3.app",
-  "productName": "Discord3",
+  "appId": "com.freehub.app",
+  "productName": "Freehub",
   "electronVersion": "33.4.11",
   "directories": {
     "output": "release"

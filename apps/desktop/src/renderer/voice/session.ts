@@ -1,10 +1,10 @@
-import { ClientEvent, type User } from '@discord3/shared';
+import { ClientEvent, type User } from '@freehub/shared';
 import {
   getMicrophoneStream,
   PeerManager,
   VoiceActivityDetector,
   VolumeController,
-} from '@discord3/webrtc';
+} from '@freehub/webrtc';
 import { getSocket } from '../net/socket';
 import { useConnectionStore } from '../stores/useConnectionStore';
 

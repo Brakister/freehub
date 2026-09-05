@@ -1,4 +1,4 @@
-import { ICE_SERVERS } from '@discord3/shared';
+import { ICE_SERVERS } from '@freehub/shared';
 import { VoiceActivityDetector } from './vad';
 
 type Signal = { type?: string; sdp?: string; candidate?: RTCIceCandidateInit };

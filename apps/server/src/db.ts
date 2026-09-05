@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3';
-import { isRoomId } from '@discord3/shared';
+import { isRoomId } from '@freehub/shared';
 
 export interface RoomRow {
   id: string;

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ClientEvent, ServerEvent, type RoomState, type User } from '@discord3/shared';
-import { SettingsModal, Sidebar, VoicePanel, type VoiceUserView, useSettings } from '@discord3/ui';
+import { ClientEvent, ServerEvent, type RoomState, type User } from '@freehub/shared';
+import { SettingsModal, Sidebar, VoicePanel, type VoiceUserView, useSettings } from '@freehub/ui';
 import { getSocket } from './net/socket';
 import { useConnectionStore, type RoomInfo } from './stores/useConnectionStore';
 import { VoiceSession } from './voice/session';

@@ -1,8 +1,8 @@
 {
-  "name": "@discord3/desktop",
-  "version": "1.0.0",
+  "name": "@freehub/desktop",
+  "version": "1.0.1",
   "private": true,
-  "description": "Discord3 - voz estilo Discord: servidor Socket.IO + WebRTC mesh + desktop.",
+  "description": "Freehub - voz estilo Discord: servidor Socket.IO + WebRTC mesh + desktop.",
   "author": "Brakister <112033842+brakister@users.noreply.github.com>",
   "main": "dist/main/index.js",
   "scripts": {
@@ -14,9 +14,9 @@
     "electron:build": "npm run build && electron-builder"
   },
   "dependencies": {
-    "@discord3/shared": "*",
-    "@discord3/ui": "*",
-    "@discord3/webrtc": "*",
+    "@freehub/shared": "*",
+    "@freehub/ui": "*",
+    "@freehub/webrtc": "*",
     "electron-updater": "^6.3.9",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

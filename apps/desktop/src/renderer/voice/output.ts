@@ -1,4 +1,4 @@
-import { setAudioOutput } from '@discord3/webrtc';
+import { setAudioOutput } from '@freehub/webrtc';
 
 const audioElements = new Set<HTMLAudioElement>();
 

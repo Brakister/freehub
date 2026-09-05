@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { enumerateAudioDevices, MicrophoneTester, type AudioDevice } from '@discord3/webrtc';
+import { enumerateAudioDevices, MicrophoneTester, type AudioDevice } from '@freehub/webrtc';
 import { useSettings } from '../settings';
 
 interface SettingsModalProps {

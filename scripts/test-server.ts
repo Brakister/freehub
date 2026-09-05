@@ -5,7 +5,7 @@ import {
   isRoomId,
   isValidNickname,
   isValidRoomName,
-} from '@discord3/shared';
+} from '@freehub/shared';
 
 const URL = 'http://localhost:3001';
 

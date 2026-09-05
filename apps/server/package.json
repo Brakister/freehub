@@ -1,5 +1,5 @@
 {
-  "name": "@discord3/server",
+  "name": "@freehub/server",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -10,7 +10,7 @@
     "start": "tsx src/index.ts"
   },
   "dependencies": {
-    "@discord3/shared": "*",
+    "@freehub/shared": "*",
     "better-sqlite3": "^12.2.0",
     "cors": "^2.8.5",
     "express": "^4.21.0",

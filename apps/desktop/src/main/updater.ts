@@ -20,7 +20,7 @@ function configure(): void {
 
   if (
     process.env.UPDATE_SERVER_URL ||
-    UPDATE_SERVER_URL !== 'https://updates.example.com/discord3'
+    UPDATE_SERVER_URL !== 'https://updates.example.com/freehub'
   ) {
     autoUpdater.setFeedURL({
       provider: 'generic',

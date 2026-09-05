@@ -1,4 +1,4 @@
-import type { User } from '@discord3/shared';
+import type { User } from '@freehub/shared';
 
 export interface VoiceUserView extends User {
   speaking: boolean;

@@ -1,4 +1,4 @@
-export const APP_NAME = 'Discord3';
+export const APP_NAME = 'Freehub';
 
 export const MAX_ROOM_USERS = 6;
 export const MAX_NICKNAME_LENGTH = 24;

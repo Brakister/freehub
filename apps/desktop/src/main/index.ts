@@ -5,7 +5,7 @@ import { isDev } from './util';
 import { registerUpdater, setupUpdaterIpc } from './updater';
 import { APP_NAME } from './constants';
 
-const isSmokeTest = process.env.DISCORD3_SMOKE === '1';
+const isSmokeTest = process.env.FREEHUB_SMOKE === '1';
 
 let mainWindow: BrowserWindow | null = null;
 

@@ -38,7 +38,7 @@ export const useSettings = create<SettingsState>()(
       setSpeakerVolume: (speakerVolume) => set({ speakerVolume }),
     }),
     {
-      name: 'discord3-settings',
+      name: 'freehub-settings',
       version: 1,
     },
   ),

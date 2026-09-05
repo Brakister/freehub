@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { ClientEvent, type ConnectionStatus, type RoomState, type User } from '@discord3/shared';
+import { ClientEvent, type ConnectionStatus, type RoomState, type User } from '@freehub/shared';
 import { getSocket } from '../net/socket';
 
 export interface ScreenshareInfo {

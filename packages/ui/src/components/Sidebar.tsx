@@ -1,5 +1,5 @@
 ﻿import { useState, type FormEvent } from 'react';
-import { isRoomId, isValidRoomName, normalizeNickname } from '@discord3/shared';
+import { isRoomId, isValidRoomName, normalizeNickname } from '@freehub/shared';
 
 export interface SidebarRoom {
   id: string;
@@ -47,7 +47,7 @@ export function Sidebar(props: SidebarProps): React.JSX.Element {
   return (
     <aside className="flex h-full w-64 flex-col bg-[#1e1f22] text-[#dbdee1]">
       <div className="border-b border-black/30 px-4 py-3">
-        <div className="text-sm font-bold tracking-wide">Discord3</div>
+        <div className="text-sm font-bold tracking-wide">Freehub</div>
         <div className="truncate text-xs text-[#949ba4]" title={props.nickname}>
           {props.nickname}
         </div>

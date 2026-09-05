@@ -1,6 +1,6 @@
 import type { Server, Socket } from 'socket.io';
-import type { User } from '@discord3/shared';
-import { ClientEvent, ServerEvent } from '@discord3/shared';
+import type { User } from '@freehub/shared';
+import { ClientEvent, ServerEvent } from '@freehub/shared';
 import { DatabaseStore, type RoomRow } from './db';
 import { randomUUID } from 'node:crypto';
 

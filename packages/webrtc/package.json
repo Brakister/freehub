@@ -1,16 +1,16 @@
 {
-  "name": "@discord3/webrtc",
+  "name": "@freehub/webrtc",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc --emitDeclarationOnly && esbuild src/index.ts --bundle --format=esm --platform=browser --outfile=dist/index.js --external:@discord3/shared --external:react --external:react-dom",
+    "build": "tsc --emitDeclarationOnly && esbuild src/index.ts --bundle --format=esm --platform=browser --outfile=dist/index.js --external:@freehub/shared --external:react --external:react-dom",
     "dev": "tsc --watch"
   },
   "dependencies": {
-    "@discord3/shared": "*"
+    "@freehub/shared": "*"
   },
   "devDependencies": {
     "esbuild": "^0.24.0"

@@ -29,4 +29,4 @@ const api = {
 
 contextBridge.exposeInMainWorld('electronAPI', api);
 
-export type Discord3API = typeof api;
+export type FreehubAPI = typeof api;
