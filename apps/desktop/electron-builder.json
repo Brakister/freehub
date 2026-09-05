@@ -1,0 +1,39 @@
+{
+  "appId": "com.discord3.app",
+  "productName": "Discord3",
+  "directories": {
+    "output": "release"
+  },
+  "files": ["dist/**/*", "package.json"],
+  "asar": true,
+  "win": {
+    "target": ["nsis"],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Brakister",
+        "repo": "freehub"
+      }
+    ]
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true
+  },
+  "mac": {
+    "target": ["dmg", "zip"],
+    "category": "public.app-category.social-networking",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Brakister",
+        "repo": "freehub"
+      }
+    ]
+  },
+  "linux": {
+    "target": ["AppImage"],
+    "category": "Network"
+  }
+}
