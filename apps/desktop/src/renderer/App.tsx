@@ -87,9 +87,11 @@ function EmptyState({ connected }: { connected: boolean }): React.JSX.Element {
 function RemoteAudio({
   userId,
   getStream,
+  volume,
 }: {
   userId: string;
   getStream(userId: string): MediaStream | null;
+  volume: number;
 }): React.JSX.Element {
   const ref = useRef<HTMLAudioElement>(null);
   useEffect(() => {
@@ -97,6 +99,7 @@ function RemoteAudio({
     if (!el) return;
     const unregister = registerAudioElement(el);
     el.autoplay = true;
+    el.volume = Math.min(1, Math.max(0, volume));
     // O stream só existe depois do WebRTC conectar; verifica até aparecer.
     const apply = (): void => {
       const stream = getStream(userId);
@@ -112,8 +115,42 @@ function RemoteAudio({
       el.srcObject = null;
       unregister();
     };
-  }, [userId, getStream]);
+  }, [userId, getStream, volume]);
   return <audio ref={ref} style={{ display: 'none' }} />;
+}
+
+function useAudioLevel(stream: MediaStream | null): number {
+  const [level, setLevel] = useState(0);
+
+  useEffect(() => {
+    if (!stream || stream.getAudioTracks().length === 0) {
+      setLevel(0);
+      return;
+    }
+    const context = new AudioContext();
+    const source = context.createMediaStreamSource(stream);
+    const analyser = context.createAnalyser();
+    analyser.fftSize = 512;
+    analyser.smoothingTimeConstant = 0.2;
+    const data = new Uint8Array(analyser.fftSize);
+    source.connect(analyser);
+    const timer = setInterval(() => {
+      analyser.getByteTimeDomainData(data);
+      let sum = 0;
+      for (let i = 0; i < data.length; i += 1) {
+        const sample = (data[i] - 128) / 128;
+        sum += sample * sample;
+      }
+      setLevel(Math.sqrt(sum / data.length));
+    }, 60);
+    return () => {
+      clearInterval(timer);
+      source.disconnect();
+      void context.close();
+    };
+  }, [stream]);
+
+  return Math.min(1, level * 8);
 }
 
 function ScreenShareCard({
@@ -133,19 +170,35 @@ function ScreenShareCard({
 }): React.JSX.Element | null {
   const ref = useRef<HTMLVideoElement>(null);
   const [hasStream, setHasStream] = useState(false);
+  const [stream, setStream] = useState<MediaStream | null>(null);
   const [expanded, setExpanded] = useState(false);
+  const audioLevel = useAudioLevel(stream);
   useEffect(() => {
     const apply = (): void => {
       const stream = getStream();
       const el = ref.current;
-      if (stream && el && el.srcObject !== stream) el.srcObject = stream;
+      if (stream && el) {
+        el.muted = muted;
+        if (el.srcObject !== stream) el.srcObject = stream;
+      }
       setHasStream(Boolean(stream));
+      setStream(stream);
     };
     apply();
     const timer = setInterval(apply, 500);
     return () => clearInterval(timer);
-  }, [getStream]);
+  }, [getStream, muted]);
   if (!hasStream) return null;
+
+  const meterWidth = `${Math.round(audioLevel * 100)}%`;
+  const meter = (
+    <div className="flex items-center gap-2" title="Nível do áudio da transmissão">
+      <span className="text-[10px] font-semibold uppercase tracking-wide text-[#b5bac1]">Som</span>
+      <div className="h-1.5 w-16 overflow-hidden rounded-full bg-[#4e5058]">
+        <div className="h-full rounded-full bg-green-400 transition-[width]" style={{ width: meterWidth }} />
+      </div>
+    </div>
+  );
 
   if (expanded) {
     return (
@@ -158,6 +211,7 @@ function ScreenShareCard({
               <span className="truncate">{title}</span>
             </div>
             <div className="flex shrink-0 items-center gap-2">
+              {meter}
               {showStop && onStop && (
                 <button
                   onClick={onStop}
@@ -213,6 +267,7 @@ function ScreenShareCard({
           <span className="truncate">{title}</span>
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          {meter}
           <button
             onClick={() => setExpanded(true)}
             className="rounded bg-black/60 px-2 py-1 text-xs font-semibold text-white transition hover:bg-black/80"
@@ -264,6 +319,7 @@ export default function App(): React.JSX.Element {
     sent?: boolean;
   } | null>(null);
   const [shareRequestedBy, setShareRequestedBy] = useState<string | null>(null);
+  const [userVolumes, setUserVolumes] = useState<Record<string, number>>({});
 
   const ensureSession = useCallback(async (deviceId: string): Promise<VoiceSession> => {
     if (sessionRef.current) {
@@ -336,7 +392,7 @@ export default function App(): React.JSX.Element {
           height: { ideal: quality.height },
           frameRate: { ideal: quality.frameRate },
         },
-        audio: true,
+        audio: { suppressLocalAudioPlayback: true } as MediaTrackConstraints,
       });
       await session.publishScreenShare(stream);
       screenStreamRef.current = stream;
@@ -583,6 +639,10 @@ export default function App(): React.JSX.Element {
               onToggleMute={() => useConnectionStore.getState().toggleMute()}
               onToggleScreenShare={() => void handleToggleScreenShare()}
               onLeaveRoom={handleLeaveRoom}
+              userVolumes={userVolumes}
+              onUserVolumeChange={(userId, volume) =>
+                setUserVolumes((current) => ({ ...current, [userId]: volume }))
+              }
             />
             {screenshare &&
               (screenshare.userId === selfId ? (
@@ -609,7 +669,12 @@ export default function App(): React.JSX.Element {
             {users
               .filter((u) => u.id !== selfId)
               .map((u) => (
-                <RemoteAudio key={u.id} userId={u.id} getStream={getStream} />
+                <RemoteAudio
+                  key={u.id}
+                  userId={u.id}
+                  getStream={getStream}
+                  volume={Math.min(1, speakerVolume * (userVolumes[u.id] ?? 1))}
+                />
               ))}
           </div>
         ) : (

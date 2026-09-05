@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { User } from '@freehub/shared';
 
 export interface VoiceUserView extends User {
@@ -13,6 +14,8 @@ interface VoicePanelProps {
   onToggleMute(): void;
   onToggleScreenShare(): void;
   onLeaveRoom(): void;
+  userVolumes: Record<string, number>;
+  onUserVolumeChange(userId: string, volume: number): void;
 }
 
 export function SpeakingIndicator({ active }: { active: boolean }): React.JSX.Element {
@@ -65,7 +68,14 @@ function Avatar({
   );
 }
 
-export function VoiceParticipantTile(props: VoiceUserView): React.JSX.Element {
+export function VoiceParticipantTile(
+  props: VoiceUserView & {
+    volume?: number;
+    onVolumeChange?: (userId: string, volume: number) => void;
+  },
+): React.JSX.Element {
+  const [volumeMenuOpen, setVolumeMenuOpen] = useState(false);
+  const volume = props.volume ?? 1;
   return (
     <div
       data-testid="voice-participant"
@@ -74,7 +84,7 @@ export function VoiceParticipantTile(props: VoiceUserView): React.JSX.Element {
       }`}
     >
       <Avatar nickname={props.nickname} speaking={props.speaking} muted={props.muted} />
-      <div className="mt-3 flex items-center gap-2 text-sm font-medium text-[#dbdee1]">
+      <div className="mt-3 flex w-full items-center justify-center gap-2 text-sm font-medium text-[#dbdee1]">
         <SpeakingIndicator active={props.speaking} />
         <span className="max-w-[120px] truncate">{props.nickname}</span>
         {props.sharingScreen && (
@@ -91,7 +101,37 @@ export function VoiceParticipantTile(props: VoiceUserView): React.JSX.Element {
             <path d="m8 21 4-4 4 4" />
           </svg>
         )}
+        {!props.isSelf && props.onVolumeChange && (
+          <button
+            type="button"
+            onClick={() => setVolumeMenuOpen((open) => !open)}
+            title="Volume individual"
+            aria-label={`Volume de ${props.nickname}`}
+            className="ml-1 text-[#b5bac1] transition hover:text-white"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M4 9v6h4l5 4V5L8 9H4Z" />
+              <path d="M17 9.5a4 4 0 0 1 0 5" strokeLinecap="round" />
+            </svg>
+          </button>
+        )}
       </div>
+      {!props.isSelf && props.onVolumeChange && volumeMenuOpen && (
+        <div className="mt-2 flex w-full items-center gap-2 rounded bg-[#1e1f22] px-2 py-1.5">
+          <span className="text-[10px] text-[#b5bac1]">0</span>
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+            value={volume}
+            onChange={(event) => props.onVolumeChange?.(props.id, Number(event.target.value))}
+            aria-label={`Volume de ${props.nickname}`}
+            className="min-w-0 flex-1 accent-[#5865f2]"
+          />
+          <span className="w-7 text-right text-[10px] text-[#b5bac1]">{Math.round(volume * 100)}%</span>
+        </div>
+      )}
     </div>
   );
 }
@@ -124,7 +164,12 @@ export function VoicePanel(props: VoicePanelProps): React.JSX.Element {
       <div className="flex-1 overflow-y-auto p-6">
         <div className="mx-auto grid max-w-4xl grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           {props.users.map((u) => (
-            <VoiceParticipantTile key={u.id} {...u} />
+            <VoiceParticipantTile
+              key={u.id}
+              {...u}
+              volume={props.userVolumes[u.id] ?? 1}
+              onVolumeChange={props.onUserVolumeChange}
+            />
           ))}
         </div>
       </div>

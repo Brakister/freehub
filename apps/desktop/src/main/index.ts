@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, session } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu, session } from 'electron';
 import { join } from 'node:path';
 import { isDev } from './util';
 
@@ -19,6 +19,7 @@ function createWindow(): BrowserWindow {
     minHeight: 600,
     backgroundColor: '#1e1f22',
     title: APP_NAME,
+    autoHideMenuBar: true,
     show: !isSmokeTest,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -27,6 +28,7 @@ function createWindow(): BrowserWindow {
       sandbox: false,
     },
   });
+  mainWindow.setMenuBarVisibility(false);
 
   if (isDev && !isSmokeTest) {
     mainWindow.loadURL('http://localhost:5173');
@@ -76,6 +78,7 @@ function createWindow(): BrowserWindow {
 }
 
 app.whenReady().then(() => {
+  Menu.setApplicationMenu(null);
   registerUpdater();
   setupUpdaterIpc();
 
