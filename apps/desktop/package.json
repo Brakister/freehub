@@ -2,6 +2,8 @@
   "name": "@discord3/desktop",
   "version": "1.0.0",
   "private": true,
+  "description": "Discord3 - voz estilo Discord: servidor Socket.IO + WebRTC mesh + desktop.",
+  "author": "Brakister <112033842+brakister@users.noreply.github.com>",
   "main": "dist/main/index.js",
   "scripts": {
     "dev": "vite",
