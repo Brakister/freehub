@@ -97,6 +97,7 @@ export default function App(): React.JSX.Element {
   const sessionRef = useRef<VoiceSession | null>(null);
   const screenStreamRef = useRef<MediaStream | null>(null);
   const [micError, setMicError] = useState<string | null>(null);
+  const [shareError, setShareError] = useState<string | null>(null);
 
   const ensureSession = useCallback(async (deviceId: string): Promise<VoiceSession> => {
     if (sessionRef.current) {
@@ -160,9 +161,17 @@ export default function App(): React.JSX.Element {
         });
         await session.publishScreenShare(stream);
         screenStreamRef.current = stream;
+        setShareError(null);
         getSocket().emit(ClientEvent.startScreenShare);
-      } catch {
-        // Usuário cancelou a seleção de tela.
+      } catch (err) {
+        // Usuário cancelou a seleção de tela ou houve falha de captura.
+        const name = err instanceof Error ? err.name : '';
+        if (name === 'NotAllowedError' || name === 'AbortError') {
+          setShareError(null);
+        } else {
+          console.error('[share] falha ao capturar tela:', err);
+          setShareError('Não foi possível compartilhar a tela. Tente novamente.');
+        }
       }
     }
   };
@@ -330,6 +339,7 @@ export default function App(): React.JSX.Element {
           />
         )}
         {micError && <ErrorBanner message={micError} onDismiss={() => setMicError(null)} />}
+        {shareError && <ErrorBanner message={shareError} onDismiss={() => setShareError(null)} />}
 
         {room ? (
           <div className="relative flex-1">

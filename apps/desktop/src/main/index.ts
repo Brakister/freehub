@@ -1,10 +1,11 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, session } from 'electron';
 import { join } from 'node:path';
 import { isDev } from './util';
 
 import { registerUpdater, setupUpdaterIpc } from './updater';
 import { APP_NAME } from './constants';
 import { startServer } from './server';
+import { pickDesktopSource } from './displayPicker';
 
 const isSmokeTest = process.env.FREEHUB_SMOKE === '1';
 
@@ -77,6 +78,18 @@ function createWindow(): BrowserWindow {
 app.whenReady().then(() => {
   registerUpdater();
   setupUpdaterIpc();
+
+  // Sem este handler o Electron rejeita navigator.mediaDevices.getDisplayMedia.
+  session.defaultSession.setDisplayMediaRequestHandler((_request, callback) => {
+    void pickDesktopSource().then((source) => {
+      if (source) {
+        // video = tela/janela escolhida; audio 'loopback' = áudio do sistema.
+        callback({ video: source, audio: 'loopback' });
+      } else {
+        callback({});
+      }
+    });
+  });
 
   void startServer();
 
