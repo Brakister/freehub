@@ -9,6 +9,8 @@ export interface Settings {
   micGain: number;
   /** Volume do alto-falante (0..1). */
   speakerVolume: number;
+  /** URL do servidor de voz. Vazio = padrão (localhost). */
+  serverUrl: string;
 }
 
 interface SettingsState extends Settings {
@@ -17,6 +19,7 @@ interface SettingsState extends Settings {
   setOutputDeviceId(outputDeviceId: string): void;
   setMicGain(value: number): void;
   setSpeakerVolume(value: number): void;
+  setServerUrl(value: string): void;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -25,6 +28,7 @@ export const DEFAULT_SETTINGS: Settings = {
   outputDeviceId: '',
   micGain: 1,
   speakerVolume: 1,
+  serverUrl: '',
 };
 
 export const useSettings = create<SettingsState>()(
@@ -36,10 +40,15 @@ export const useSettings = create<SettingsState>()(
       setOutputDeviceId: (outputDeviceId) => set({ outputDeviceId }),
       setMicGain: (micGain) => set({ micGain }),
       setSpeakerVolume: (speakerVolume) => set({ speakerVolume }),
+      setServerUrl: (serverUrl) => set({ serverUrl }),
     }),
     {
       name: 'freehub-settings',
-      version: 1,
+      version: 2,
+      merge: (persisted, current) => {
+        const p = (persisted ?? {}) as Partial<Settings>;
+        return { ...current, ...p, serverUrl: p.serverUrl ?? '' };
+      },
     },
   ),
 );

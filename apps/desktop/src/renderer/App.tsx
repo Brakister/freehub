@@ -91,6 +91,7 @@ export default function App(): React.JSX.Element {
   const micGain = useSettings((s) => s.micGain);
   const speakerVolume = useSettings((s) => s.speakerVolume);
   const outputDeviceId = useSettings((s) => s.outputDeviceId);
+  const serverUrl = useSettings((s) => s.serverUrl);
 
   const sessionRef = useRef<VoiceSession | null>(null);
   const screenStreamRef = useRef<MediaStream | null>(null);
@@ -154,8 +155,13 @@ export default function App(): React.JSX.Element {
     }
   };
 
-  // ---- listeners de socket (uma vez) ----
+  // ---- listeners de socket (uma vez por URL de servidor) ----
   useEffect(() => {
+    // Troca de servidor: limpa estado local e sessão de voz para reconectar limpo.
+    useConnectionStore.getState().reset();
+    void sessionRef.current?.dispose();
+    sessionRef.current = null;
+
     const socket = getSocket();
     type Payload = unknown;
     type Handler = (payload: Payload) => void;
@@ -240,7 +246,7 @@ export default function App(): React.JSX.Element {
         socket.off(event, handler as (payload?: unknown) => void);
       socket.disconnect();
     };
-  }, []);
+  }, [serverUrl]);
 
   // ---- mute local ----
   useEffect(

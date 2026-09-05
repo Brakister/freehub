@@ -104,6 +104,25 @@ export function SettingsModal(props: SettingsModalProps): React.JSX.Element | nu
 
         <div className="flex-1 space-y-5 overflow-y-auto px-5 py-5">
           <section>
+            <label className="mb-1 block text-xs font-semibold text-[#949ba4]">
+              Servidor de voz (URL)
+            </label>
+            <input
+              type="url"
+              value={settings.serverUrl}
+              onChange={(e) => settings.setServerUrl(e.target.value)}
+              placeholder="http://localhost:3001 (padrão)"
+              spellCheck={false}
+              className="w-full rounded bg-[#1e1f22] px-3 py-2 text-sm outline-none ring-offset-2 transition focus:ring-2 focus:ring-[#5865f2]"
+            />
+            <p className="mt-1 text-[11px] leading-relaxed text-[#949ba4]">
+              Vazio = servidor padrão local. Para entrar numa sala hospedada em outra máquina/prestador,
+              cole a URL pública (ex.: <span className="font-mono">https://xyz.trycloudflare.com</span>).
+              A conexão é refeita automaticamente.
+            </p>
+          </section>
+
+          <section>
             <label className="mb-1 block text-xs font-semibold text-[#949ba4]">Apelido</label>
             <input
               value={settings.nickname}

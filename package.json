@@ -11,7 +11,8 @@
     "build": "npm run build --workspaces",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "test:server": "tsx scripts/test-server.ts"
+    "test:server": "tsx scripts/test-server.ts",
+    "tunnel:server": "powershell -ExecutionPolicy Bypass -File scripts/tunnel.ps1"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^8.0.0",

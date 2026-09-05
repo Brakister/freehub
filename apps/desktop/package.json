@@ -1,6 +1,6 @@
 {
   "name": "@freehub/desktop",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "private": true,
   "description": "Freehub - voz estilo Discord: servidor Socket.IO + WebRTC mesh + desktop.",
   "author": "Brakister <112033842+brakister@users.noreply.github.com>",
