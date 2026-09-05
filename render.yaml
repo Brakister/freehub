@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: freehub-server
+    runtime: node
+    plan: free
+    buildCommand: npm ci && npm run build --workspace @freehub/shared && npm run build --workspace @freehub/server
+    startCommand: npm run start --workspace @freehub/server
+    healthCheckPath: /health
+    autoDeploy: true

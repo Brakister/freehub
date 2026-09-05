@@ -62,6 +62,16 @@ Observações:
   NATs muito restritivos/firewalls corporativos pode ser preciso adicionar um
   TURN (ex.: Cloudflare Calls) no futuro.
 
+## Servidor público grátis no Render
+
+O arquivo `render.yaml` configura o servidor de sinalização como um Web Service
+gratuito no Render. No painel do Render, escolha **New > Blueprint**, conecte o
+repositório e confirme o blueprint. Depois do deploy, copie a URL HTTPS gerada
+e informe essa URL em **Configurações > Servidor de voz** no Freehub.
+
+O plano gratuito pode dormir após um período sem uso, então a primeira conexão
+depois de algum tempo pode demorar alguns segundos.
+
 ## Build e release
 
 ```bash
