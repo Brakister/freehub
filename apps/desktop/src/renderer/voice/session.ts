@@ -82,7 +82,7 @@ export class VoiceSession {
   private startLocalVad(): void {
     if (!this.processedStream) return;
     this.stopLocalVad?.();
-    this.localVad = new VoiceActivityDetector(this.processedStream);
+    this.localVad = new VoiceActivityDetector(this.processedStream, { threshold: 0.01 });
     this.localVad.onChange((speaking) => {
       const { selfId, muted } = useConnectionStore.getState();
       if (!selfId) return;

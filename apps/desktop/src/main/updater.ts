@@ -15,7 +15,9 @@ function configure(): void {
   if (configured) return;
   configured = true;
 
-  autoUpdater.autoDownload = false;
+  // Baixa atualizações automaticamente assim que detectadas; o banner mostra
+  // o progresso e oferece "Instalar e reiniciar" ao concluir.
+  autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
 
   if (
@@ -38,9 +40,12 @@ function configure(): void {
     sendStatus('idle', { message: 'Verificando atualizações…' }),
   );
   autoUpdater.on('update-available', (info: UpdateInfo) => {
-    sendStatus('available', {
-      message: `Nova versão disponível: ${info.version}`,
+    // Com autoDownload=true o download começa sozinho; já reporta 'downloading'
+    // para o banner mostrar a barra de progresso em vez do botão "Baixar agora".
+    sendStatus('downloading', {
+      message: `Nova versão ${info.version} disponível — baixando…`,
       version: info.version,
+      percent: 0,
     });
   });
   autoUpdater.on('update-not-available', () =>

@@ -66,9 +66,21 @@ function RemoteAudio({
     if (!el) return;
     const unregister = registerAudioElement(el);
     el.autoplay = true;
-    const stream = getStream(userId);
-    if (stream) el.srcObject = stream;
-    return unregister;
+    // O stream só existe depois do WebRTC conectar; verifica até aparecer.
+    const apply = (): void => {
+      const stream = getStream(userId);
+      if (stream && el.srcObject !== stream) {
+        el.srcObject = stream;
+        el.play().catch(() => undefined);
+      }
+    };
+    apply();
+    const timer = setInterval(apply, 500);
+    return () => {
+      clearInterval(timer);
+      el.srcObject = null;
+      unregister();
+    };
   }, [userId, getStream]);
   return <audio ref={ref} style={{ display: 'none' }} />;
 }

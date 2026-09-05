@@ -13,6 +13,7 @@ export interface VADOptions {
 export type VADListener = (speaking: boolean, level: number) => void;
 
 export class VoiceActivityDetector {
+  private ctx: AudioContext;
   private analyser: AnalyserNode;
   private data: Uint8Array<ArrayBuffer>;
   private threshold: number;
@@ -21,14 +22,14 @@ export class VoiceActivityDetector {
   private listeners = new Set<VADListener>();
 
   constructor(stream: MediaStream, opts: VADOptions = {}) {
-    const ctx = new AudioContext();
-    const source = ctx.createMediaStreamSource(stream);
-    this.analyser = ctx.createAnalyser();
-    this.analyser.fftSize = 1024;
-    this.analyser.smoothingTimeConstant = 0.2;
+    this.ctx = new AudioContext();
+    const source = this.ctx.createMediaStreamSource(stream);
+    this.analyser = this.ctx.createAnalyser();
+    this.analyser.fftSize = 512;
+    this.analyser.smoothingTimeConstant = 0.15;
     source.connect(this.analyser);
     this.data = new Uint8Array(this.analyser.fftSize);
-    this.threshold = opts.threshold ?? 0.02;
+    this.threshold = opts.threshold ?? 0.012;
     this.holdMs = opts.holdMs ?? 250;
   }
 
@@ -55,6 +56,9 @@ export class VoiceActivityDetector {
    * Inicia a verificação periódica. Retorna função para parar.
    */
   start(): () => void {
+    // Garante o contexto ativo (parado caso a criação não tenha ocorrido em
+    // um gesto de usuário; no Electron não deve estar suspenso por padrão).
+    if (this.ctx.state === 'suspended') void this.ctx.resume().catch(() => undefined);
     const tick = (): void => {
       const level = this.measure();
       if (level >= this.threshold) {

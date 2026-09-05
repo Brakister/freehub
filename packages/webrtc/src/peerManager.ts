@@ -67,7 +67,7 @@ export class PeerManager {
         if (!isScreen && !voiceStream.getTracks().includes(e.track)) {
           voiceStream.addTrack(e.track);
           entry.stopDetector();
-          const detector = new VoiceActivityDetector(voiceStream);
+          const detector = new VoiceActivityDetector(voiceStream, { threshold: 0.008 });
           detector.onChange((speaking, level) =>
             this.callbacks.onSpeakingChange?.(userId, speaking, level),
           );

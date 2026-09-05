@@ -42,7 +42,7 @@ function finishPick(source: DesktopCapturerSource | null): void {
   handler?.(source);
 }
 
-function buildPickerHtml(): string {
+export function buildPickerHtml(): string {
   return `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -86,8 +86,7 @@ function buildPickerHtml(): string {
       .replace(/"/g, '&quot;');
   }
   const grid = document.getElementById('grid');
-  const pickerApi = window.pickerApi;
-  pickerApi.list().then((sources) => {
+  window.pickerApi.list().then((sources) => {
     if (!sources.length) {
       grid.innerHTML = '<div class="empty">Nenhuma tela ou janela encontrada.</div>';
       return;
@@ -99,12 +98,12 @@ function buildPickerHtml(): string {
         (s.thumbnail
           ? '<img src="' + s.thumbnail + '" alt="" />'
           : '<div style="width:100%;height:100px;background:#000;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#949ba4;font-size:28px">\\u{1F4BB}</div>') +
-        '<span>\${escape(s.name)}</span>';
-      b.addEventListener('click', () => pickerApi.select(s.id));
+        '<span>' + escape(s.name) + '</span>';
+      b.addEventListener('click', () => window.pickerApi.select(s.id));
       grid.appendChild(b);
     }
   });
-  document.getElementById('cancel').addEventListener('click', () => pickerApi.cancel());
+  document.getElementById('cancel').addEventListener('click', () => window.pickerApi.cancel());
 </script>
 </body>
 </html>`;
