@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { enumerateAudioDevices, MicrophoneTester, type AudioDevice } from '@freehub/webrtc';
+import { SCREEN_QUALITIES } from '@freehub/shared';
 import { useSettings } from '../settings';
 
 interface SettingsModalProps {
@@ -162,6 +163,27 @@ export function SettingsModal(props: SettingsModalProps): React.JSX.Element | nu
                 </option>
               ))}
             </select>
+          </section>
+
+          <section>
+            <label className="mb-1 block text-xs font-semibold text-[#949ba4]">
+              Qualidade da tela compartilhada
+            </label>
+            <select
+              value={settings.screenQualityId}
+              onChange={(e) => settings.setScreenQualityId(e.target.value)}
+              className="w-full rounded bg-[#1e1f22] px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-[#5865f2]"
+            >
+              {SCREEN_QUALITIES.map((q) => (
+                <option key={q.id} value={q.id}>
+                  {q.label}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-[11px] leading-relaxed text-[#949ba4]">
+              Quanto maior a qualidade, mais internet de upload consome. Se o som do sistema não sair,
+              marque a caixa que inclui o áudio do sistema na seleção de tela.
+            </p>
           </section>
 
           <section>

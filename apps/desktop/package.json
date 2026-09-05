@@ -1,6 +1,6 @@
 {
   "name": "@freehub/desktop",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": true,
   "description": "Freehub - voz estilo Discord: servidor Socket.IO + WebRTC mesh + desktop.",
   "author": "Brakister <112033842+brakister@users.noreply.github.com>",
@@ -18,14 +18,18 @@
     "@freehub/ui": "*",
     "@freehub/webrtc": "*",
     "electron-updater": "^6.3.9",
+    "express": "^4.21.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "socket.io": "^4.8.0",
     "socket.io-client": "^4.8.0",
+    "sql.js": "^1.11.0",
     "zustand": "^5.0.0"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@types/sql.js": "^1.4.11",
     "@vitejs/plugin-react": "^4.3.0",
     "autoprefixer": "^10.4.0",
     "concurrently": "^9.0.0",

@@ -13,6 +13,8 @@ export interface PeerCallbacks {
 interface PeerEntry {
   pc: RTCPeerConnection;
   remoteStream: MediaStream;
+  voiceStream: MediaStream;
+  screenTracks: Set<MediaStreamTrack>;
   stopDetector: () => void;
 }
 
@@ -38,9 +40,12 @@ export class PeerManager {
 
     const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
     const remoteStream = new MediaStream();
+    const voiceStream = new MediaStream();
     const entry: PeerEntry = {
       pc,
       remoteStream,
+      voiceStream,
+      screenTracks: new Set<MediaStreamTrack>(),
       stopDetector: () => undefined,
     };
     this.peers.set(userId, entry);
@@ -56,15 +61,19 @@ export class PeerManager {
     };
 
     pc.ontrack = (e) => {
-      e.streams[0]?.getTracks().forEach((t) => {
-        if (!remoteStream.getTracks().includes(t)) remoteStream.addTrack(t);
-      });
-      entry.stopDetector();
-      const detector = new VoiceActivityDetector(remoteStream);
-      detector.onChange((speaking, level) =>
-        this.callbacks.onSpeakingChange?.(userId, speaking, level),
-      );
-      entry.stopDetector = detector.start();
+      const isScreen = (e.streams[0]?.getVideoTracks().length ?? 0) > 0;
+      if (e.track.kind === 'audio') {
+        if (!remoteStream.getTracks().includes(e.track)) remoteStream.addTrack(e.track);
+        if (!isScreen && !voiceStream.getTracks().includes(e.track)) {
+          voiceStream.addTrack(e.track);
+          entry.stopDetector();
+          const detector = new VoiceActivityDetector(voiceStream);
+          detector.onChange((speaking, level) =>
+            this.callbacks.onSpeakingChange?.(userId, speaking, level),
+          );
+          entry.stopDetector = detector.start();
+        }
+      }
     };
 
     pc.onconnectionstatechange = () => {
@@ -104,25 +113,32 @@ export class PeerManager {
   }
 
   /**
-   * Publica uma trilha de vídeo (screen share) para todos os peers e
-   * renegocia. Deve ser chamado após setLocalStream.
+   * Publica as trilhas de vídeo e áudio da tela (screen share) para todos os
+   * peers e renegocia. O áudio do display envia o som do sistema; o áudio de
+   * voz dos demais continua tocando normalmente.
    */
   async publishScreenTrack(stream: MediaStream): Promise<void> {
-    const videoTrack = stream.getVideoTracks()[0];
-    if (!videoTrack) return;
+    for (const entry of this.peers.values()) {
+      for (const track of stream.getTracks()) {
+        if (entry.screenTracks.has(track)) continue;
+        entry.screenTracks.add(track);
+        entry.pc.addTrack(track, stream);
+      }
+    }
     for (const userId of this.getPeerIds()) {
-      const entry = this.peers.get(userId);
-      if (!entry) continue;
-      entry.pc.addTrack(videoTrack, stream);
       await this.call(userId);
     }
   }
 
-  /** Remove a trilha de vídeo compartilhada e renegocia. */
+  /** Remove apenas as trilhas de screen share e renegocia (voz permanece). */
   async unpublishScreenTrack(): Promise<void> {
     for (const entry of this.peers.values()) {
-      const sender = entry.pc.getSenders().find((s) => s.track?.kind === 'video');
-      if (sender) entry.pc.removeTrack(sender);
+      for (const sender of entry.pc.getSenders()) {
+        if (sender.track && entry.screenTracks.has(sender.track)) {
+          entry.pc.removeTrack(sender);
+        }
+      }
+      entry.screenTracks.clear();
     }
     for (const userId of this.getPeerIds()) {
       await this.call(userId);

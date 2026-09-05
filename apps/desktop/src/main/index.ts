@@ -4,6 +4,7 @@ import { isDev } from './util';
 
 import { registerUpdater, setupUpdaterIpc } from './updater';
 import { APP_NAME } from './constants';
+import { startServer } from './server';
 
 const isSmokeTest = process.env.FREEHUB_SMOKE === '1';
 
@@ -76,6 +77,8 @@ function createWindow(): BrowserWindow {
 app.whenReady().then(() => {
   registerUpdater();
   setupUpdaterIpc();
+
+  void startServer();
 
   createWindow();
 

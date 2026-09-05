@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { DEFAULT_SCREEN_QUALITY_ID } from '@freehub/shared';
 
 export interface Settings {
   nickname: string;
@@ -11,6 +12,8 @@ export interface Settings {
   speakerVolume: number;
   /** URL do servidor de voz. Vazio = padrão (localhost). */
   serverUrl: string;
+  /** Qualidade da tela compartilhada (id em SCREEN_QUALITIES). */
+  screenQualityId: string;
 }
 
 interface SettingsState extends Settings {
@@ -20,6 +23,7 @@ interface SettingsState extends Settings {
   setMicGain(value: number): void;
   setSpeakerVolume(value: number): void;
   setServerUrl(value: string): void;
+  setScreenQualityId(value: string): void;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -29,6 +33,7 @@ export const DEFAULT_SETTINGS: Settings = {
   micGain: 1,
   speakerVolume: 1,
   serverUrl: '',
+  screenQualityId: DEFAULT_SCREEN_QUALITY_ID,
 };
 
 export const useSettings = create<SettingsState>()(
@@ -41,13 +46,19 @@ export const useSettings = create<SettingsState>()(
       setMicGain: (micGain) => set({ micGain }),
       setSpeakerVolume: (speakerVolume) => set({ speakerVolume }),
       setServerUrl: (serverUrl) => set({ serverUrl }),
+      setScreenQualityId: (screenQualityId) => set({ screenQualityId }),
     }),
     {
       name: 'freehub-settings',
       version: 2,
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<Settings>;
-        return { ...current, ...p, serverUrl: p.serverUrl ?? '' };
+        return {
+          ...current,
+          ...p,
+          serverUrl: p.serverUrl ?? '',
+          screenQualityId: p.screenQualityId ?? DEFAULT_SCREEN_QUALITY_ID,
+        };
       },
     },
   ),

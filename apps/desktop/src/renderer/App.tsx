@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ClientEvent, ServerEvent, type RoomState, type User } from '@freehub/shared';
+import { ClientEvent, ServerEvent, SCREEN_QUALITIES, DEFAULT_SCREEN_QUALITY_ID, type RoomState, type User } from '@freehub/shared';
 import { SettingsModal, Sidebar, VoicePanel, type VoiceUserView, useSettings } from '@freehub/ui';
 import { getSocket } from './net/socket';
 import { useConnectionStore, type RoomInfo } from './stores/useConnectionStore';
@@ -92,6 +92,7 @@ export default function App(): React.JSX.Element {
   const speakerVolume = useSettings((s) => s.speakerVolume);
   const outputDeviceId = useSettings((s) => s.outputDeviceId);
   const serverUrl = useSettings((s) => s.serverUrl);
+  const screenQualityId = useSettings((s) => s.screenQualityId);
 
   const sessionRef = useRef<VoiceSession | null>(null);
   const screenStreamRef = useRef<MediaStream | null>(null);
@@ -145,7 +146,18 @@ export default function App(): React.JSX.Element {
       getSocket().emit(ClientEvent.stopScreenShare);
     } else {
       try {
-        const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+        const quality =
+          SCREEN_QUALITIES.find((q) => q.id === screenQualityId) ??
+          SCREEN_QUALITIES.find((q) => q.id === DEFAULT_SCREEN_QUALITY_ID) ??
+          SCREEN_QUALITIES[0];
+        const stream = await navigator.mediaDevices.getDisplayMedia({
+          video: {
+            width: { ideal: quality.width },
+            height: { ideal: quality.height },
+            frameRate: { ideal: quality.frameRate },
+          },
+          audio: true,
+        });
         await session.publishScreenShare(stream);
         screenStreamRef.current = stream;
         getSocket().emit(ClientEvent.startScreenShare);

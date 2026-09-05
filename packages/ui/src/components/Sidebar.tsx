@@ -37,7 +37,7 @@ export function Sidebar(props: SidebarProps): React.JSX.Element {
     setError('');
     const code = roomCode.trim().toUpperCase();
     if (!isRoomId(code)) {
-      setError('CÃ³digo invÃ¡lido. Use o formato de 6 letras/nÃºmeros.');
+      setError('Código inválido. Use o formato de 6 letras/números.');
       return;
     }
     props.onJoinRoom(code);
@@ -62,7 +62,7 @@ export function Sidebar(props: SidebarProps): React.JSX.Element {
           </div>
         ) : (
           <div className="mb-3 rounded bg-[#2b2d31] p-3 text-xs text-[#949ba4]">
-            VocÃª nÃ£o estÃ¡ em nenhuma sala.
+            Você não está em nenhuma sala.
           </div>
         )}
 
@@ -90,7 +90,7 @@ export function Sidebar(props: SidebarProps): React.JSX.Element {
 
         <form onSubmit={(e) => void handleJoin(e)} className="mb-4">
           <label className="mb-1 block text-xs font-semibold text-[#949ba4]">
-            Entrar com cÃ³digo
+            Entrar com código
           </label>
           <input
             value={roomCode}
@@ -133,7 +133,7 @@ export function Sidebar(props: SidebarProps): React.JSX.Element {
             <circle cx="12" cy="12" r="3" />
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
           </svg>
-          ConfiguraÃ§Ãµes
+          Configurações
         </button>
       </div>
     </aside>
