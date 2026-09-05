@@ -39,6 +39,37 @@ function ErrorBanner({
   );
 }
 
+function NoticeBanner({
+  message,
+  actionLabel,
+  onAction,
+  onDismiss,
+}: {
+  message: string;
+  actionLabel?: string;
+  onAction?: () => void;
+  onDismiss(): void;
+}): React.JSX.Element {
+  return (
+    <div className="flex items-center justify-between gap-3 bg-[#2b2d31] px-4 py-1.5 text-xs font-medium text-[#dbdee1]">
+      <span>{message}</span>
+      <div className="flex shrink-0 items-center gap-2">
+        {actionLabel && onAction && (
+          <button
+            onClick={onAction}
+            className="rounded bg-[#5865f2] px-2 py-0.5 font-semibold text-white transition hover:bg-[#4752c4]"
+          >
+            {actionLabel}
+          </button>
+        )}
+        <button onClick={onDismiss} className="rounded px-2 hover:bg-white/10">
+          ×
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function EmptyState({ connected }: { connected: boolean }): React.JSX.Element {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-3 text-[#b5bac1]">
@@ -90,14 +121,19 @@ function ScreenShareCard({
   title,
   showStop,
   onStop,
+  muted,
+  miniUsers = [],
 }: {
   getStream: () => MediaStream | null;
   title: string;
   showStop: boolean;
   onStop?: () => void;
+  muted: boolean;
+  miniUsers?: VoiceUserView[];
 }): React.JSX.Element | null {
   const ref = useRef<HTMLVideoElement>(null);
   const [hasStream, setHasStream] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   useEffect(() => {
     const apply = (): void => {
       const stream = getStream();
@@ -110,22 +146,88 @@ function ScreenShareCard({
     return () => clearInterval(timer);
   }, [getStream]);
   if (!hasStream) return null;
+
+  if (expanded) {
+    return (
+      <div className="absolute inset-0 z-30 bg-black">
+        <video ref={ref} autoPlay playsInline muted={muted} className="h-full w-full object-contain bg-black" />
+        <div className="absolute inset-x-0 top-0 bg-gradient-to-b from-black/80 to-transparent px-4 pb-8 pt-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-xs font-medium text-white">
+              <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-red-500" />
+              <span className="truncate">{title}</span>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              {showStop && onStop && (
+                <button
+                  onClick={onStop}
+                  className="rounded bg-[#d83c3e] px-3 py-1 text-xs font-semibold text-white transition hover:bg-[#b83234]"
+                >
+                  Parar
+                </button>
+              )}
+              <button
+                onClick={() => setExpanded(false)}
+                className="rounded bg-black/60 px-3 py-1 text-xs font-semibold text-white transition hover:bg-black/80"
+              >
+                Sair
+              </button>
+            </div>
+          </div>
+        </div>
+        {miniUsers.length > 0 && (
+          <div className="absolute inset-x-0 bottom-4 z-10 flex items-end justify-center gap-3 px-6">
+            {miniUsers.map((u) => (
+              <div key={u.id} className="flex w-20 flex-col items-center gap-1">
+                <span
+                  className={`flex h-11 w-11 items-center justify-center rounded-full text-sm font-bold text-white ${
+                    u.speaking ? 'ring-2 ring-[#3ba55c]' : 'ring-1 ring-white/40'
+                  } ${u.isSelf ? 'bg-[#5865f2]' : 'bg-[#41434a]'}`}
+                >
+                  {u.nickname.charAt(0).toUpperCase()}
+                </span>
+                <span className="max-w-full truncate text-[11px] font-medium text-white drop-shadow">
+                  {u.nickname}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="absolute bottom-20 right-6 z-20 w-80 overflow-hidden rounded-xl border-2 border-[#5865f2] bg-black shadow-2xl">
-      <video ref={ref} autoPlay muted playsInline className="aspect-video w-full bg-black" />
+      <video
+        ref={ref}
+        autoPlay
+        playsInline
+        muted={muted}
+        onClick={() => setExpanded(true)}
+        className="aspect-video w-full cursor-zoom-in bg-black"
+      />
       <div className="flex items-center justify-between gap-2 bg-[#1e1f22]/95 px-3 py-2">
         <div className="flex items-center gap-2 text-xs font-medium text-white">
           <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-red-500" />
           <span className="truncate">{title}</span>
         </div>
-        {showStop && onStop && (
+        <div className="flex shrink-0 items-center gap-2">
           <button
-            onClick={onStop}
-            className="shrink-0 rounded bg-[#d83c3e] px-3 py-1 text-xs font-semibold text-white transition hover:bg-[#b83234]"
+            onClick={() => setExpanded(true)}
+            className="rounded bg-black/60 px-2 py-1 text-xs font-semibold text-white transition hover:bg-black/80"
           >
-            Parar
+            Tela cheia
           </button>
-        )}
+          {showStop && onStop && (
+            <button
+              onClick={onStop}
+              className="shrink-0 rounded bg-[#d83c3e] px-3 py-1 text-xs font-semibold text-white transition hover:bg-[#b83234]"
+            >
+              Parar
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -156,6 +258,12 @@ export default function App(): React.JSX.Element {
   const screenStreamRef = useRef<MediaStream | null>(null);
   const [micError, setMicError] = useState<string | null>(null);
   const [shareError, setShareError] = useState<string | null>(null);
+  const [shareNotice, setShareNotice] = useState<{
+    message: string;
+    requestUserId?: string;
+    sent?: boolean;
+  } | null>(null);
+  const [shareRequestedBy, setShareRequestedBy] = useState<string | null>(null);
 
   const ensureSession = useCallback(async (deviceId: string): Promise<VoiceSession> => {
     if (sessionRef.current) {
@@ -190,6 +298,8 @@ export default function App(): React.JSX.Element {
   };
 
   const handleLeaveRoom = (): void => {
+    setShareNotice(null);
+    setShareRequestedBy(null);
     void sessionRef.current?.dispose();
     sessionRef.current = null;
     useConnectionStore.getState().leaveRoom();
@@ -203,35 +313,56 @@ export default function App(): React.JSX.Element {
       screenStreamRef.current?.getTracks().forEach((t) => t.stop());
       screenStreamRef.current = null;
       getSocket().emit(ClientEvent.stopScreenShare);
-    } else {
-      try {
-        const quality =
-          SCREEN_QUALITIES.find((q) => q.id === screenQualityId) ??
-          SCREEN_QUALITIES.find((q) => q.id === DEFAULT_SCREEN_QUALITY_ID) ??
-          SCREEN_QUALITIES[0];
-        const stream = await navigator.mediaDevices.getDisplayMedia({
-          video: {
-            width: { ideal: quality.width },
-            height: { ideal: quality.height },
-            frameRate: { ideal: quality.frameRate },
-          },
-          audio: true,
-        });
-        await session.publishScreenShare(stream);
-        screenStreamRef.current = stream;
+      return;
+    }
+    if (screenshare?.userId) {
+      const sharerNick =
+        users.find((u) => u.id === screenshare.userId)?.nickname ?? 'Outra pessoa';
+      setShareNotice({
+        message: `${sharerNick} está transmitindo. Peça para ela parar ou espere.`,
+        requestUserId: screenshare.userId,
+      });
+      setShareError(null);
+      return;
+    }
+    try {
+      const quality =
+        SCREEN_QUALITIES.find((q) => q.id === screenQualityId) ??
+        SCREEN_QUALITIES.find((q) => q.id === DEFAULT_SCREEN_QUALITY_ID) ??
+        SCREEN_QUALITIES[0];
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: {
+          width: { ideal: quality.width },
+          height: { ideal: quality.height },
+          frameRate: { ideal: quality.frameRate },
+        },
+        audio: true,
+      });
+      await session.publishScreenShare(stream);
+      screenStreamRef.current = stream;
+      setShareError(null);
+      getSocket().emit(ClientEvent.startScreenShare);
+    } catch (err) {
+      // Usuário cancelou a seleção de tela ou houve falha de captura.
+      const name = err instanceof Error ? err.name : '';
+      if (name === 'NotAllowedError' || name === 'AbortError') {
         setShareError(null);
-        getSocket().emit(ClientEvent.startScreenShare);
-      } catch (err) {
-        // Usuário cancelou a seleção de tela ou houve falha de captura.
-        const name = err instanceof Error ? err.name : '';
-        if (name === 'NotAllowedError' || name === 'AbortError') {
-          setShareError(null);
-        } else {
-          console.error('[share] falha ao capturar tela:', err);
-          setShareError('Não foi possível compartilhar a tela. Tente novamente.');
-        }
+      } else {
+        console.error('[share] falha ao capturar tela:', err);
+        setShareError('Não foi possível compartilhar a tela. Tente novamente.');
       }
     }
+  };
+
+  const handleRequestStop = (): void => {
+    if (!shareNotice) return;
+    getSocket().emit(ClientEvent.requestStopScreenShare);
+    setShareNotice({ message: 'Pedido enviado. Agora é só aguardar.', sent: true });
+  };
+
+  const handleStopOnRequest = (): void => {
+    setShareRequestedBy(null);
+    void handleToggleScreenShare();
   };
 
   // ---- listeners de socket (uma vez por URL de servidor) ----
@@ -282,8 +413,25 @@ export default function App(): React.JSX.Element {
     const onScreenShared = (p: Payload): void => {
       const { userId } = p as { userId: string };
       useConnectionStore.getState().setScreenshare({ userId, startedAt: Date.now() });
+      setShareNotice(null);
     };
-    const onScreenStopped = (): void => useConnectionStore.getState().setScreenshare(null);
+    const onScreenStopped = (): void => {
+      useConnectionStore.getState().setScreenshare(null);
+      setShareNotice(null);
+      setShareRequestedBy(null);
+    };
+    const onScreenShareDenied = (p: Payload): void => {
+      const { sharerNickname } = p as { sharerNickname?: string };
+      setShareNotice({
+        message: `${sharerNickname ?? 'Outra pessoa'} está transmitindo. Peça para ela parar ou espere.`,
+      });
+      setShareError(null);
+    };
+    const onScreenShareRequested = (p: Payload): void => {
+      const { requesterNickname } = p as { requesterNickname?: string };
+      setShareRequestedBy(requesterNickname ?? 'Alguém');
+      setShareNotice(null);
+    };
     const onSignaling = (p: Payload): void => {
       const payload = p as { targetUserId: string; signal: unknown };
       sessionRef.current?.onSignal(payload.targetUserId, payload.signal);
@@ -309,6 +457,8 @@ export default function App(): React.JSX.Element {
       [ServerEvent.userMuted, onUserMuted],
       [ServerEvent.screenShared, onScreenShared],
       [ServerEvent.screenStopped, onScreenStopped],
+      [ServerEvent.screenShareDenied, onScreenShareDenied],
+      [ServerEvent.screenShareRequested, onScreenShareRequested],
       [ServerEvent.signaling, onSignaling],
       [ServerEvent.error, onRoomError('Erro do servidor.')],
       [ServerEvent.roomNotFound, onRoomError('Sala não encontrada.')],
@@ -371,7 +521,12 @@ export default function App(): React.JSX.Element {
   );
 
   const getStream = useCallback(
-    (userId: string) => sessionRef.current?.getRemoteStream(userId) ?? null,
+    (userId: string) => sessionRef.current?.getVoiceStream(userId) ?? null,
+    [],
+  );
+
+  const getScreenStream = useCallback(
+    (userId: string) => sessionRef.current?.getScreenStream(userId) ?? null,
     [],
   );
 
@@ -398,6 +553,25 @@ export default function App(): React.JSX.Element {
         )}
         {micError && <ErrorBanner message={micError} onDismiss={() => setMicError(null)} />}
         {shareError && <ErrorBanner message={shareError} onDismiss={() => setShareError(null)} />}
+        {shareNotice && !shareNotice.sent && (
+          <NoticeBanner
+            message={shareNotice.message}
+            actionLabel="Pedir para parar"
+            onAction={handleRequestStop}
+            onDismiss={() => setShareNotice(null)}
+          />
+        )}
+        {shareNotice?.sent && (
+          <NoticeBanner message={shareNotice.message} onDismiss={() => setShareNotice(null)} />
+        )}
+        {shareRequestedBy && (
+          <NoticeBanner
+            message={`${shareRequestedBy} pediu para você parar de compartilhar a tela.`}
+            actionLabel="Parar agora"
+            onAction={handleStopOnRequest}
+            onDismiss={() => setShareRequestedBy(null)}
+          />
+        )}
 
         {room ? (
           <div className="relative flex-1">
@@ -417,15 +591,19 @@ export default function App(): React.JSX.Element {
                   title="Você está transmitindo"
                   showStop
                   onStop={() => void handleToggleScreenShare()}
+                  muted
+                  miniUsers={voiceUsers}
                 />
               ) : (
                 <ScreenShareCard
-                  getStream={() => getStream(screenshare.userId)}
+                  getStream={() => getScreenStream(screenshare.userId)}
                   title={
                     (users.find((u) => u.id === screenshare.userId)?.nickname ?? 'Alguém') +
                     ' está transmitindo'
                   }
                   showStop={false}
+                  muted={false}
+                  miniUsers={voiceUsers}
                 />
               ))}
             {users

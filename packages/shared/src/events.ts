@@ -6,6 +6,7 @@ export const ClientEvent = {
   toggleMute: 'user:mute',
   startScreenShare: 'screen:start',
   stopScreenShare: 'screen:stop',
+  requestStopScreenShare: 'screen:request-stop',
   signaling: 'signaling:relay',
   ping: 'ping',
 } as const;
@@ -24,6 +25,8 @@ export const ServerEvent = {
   userMuted: 'user:muted',
   screenShared: 'screen:shared',
   screenStopped: 'screen:stopped',
+  screenShareDenied: 'screen:share-denied',
+  screenShareRequested: 'screen:requested',
   signaling: 'signaling:relay',
   error: 'error',
 } as const;

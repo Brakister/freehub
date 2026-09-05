@@ -12,8 +12,8 @@ export interface PeerCallbacks {
 
 interface PeerEntry {
   pc: RTCPeerConnection;
-  remoteStream: MediaStream;
   voiceStream: MediaStream;
+  screenStream: MediaStream;
   screenTracks: Set<MediaStreamTrack>;
   stopDetector: () => void;
 }
@@ -39,12 +39,12 @@ export class PeerManager {
     if (existing) return existing.pc;
 
     const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
-    const remoteStream = new MediaStream();
     const voiceStream = new MediaStream();
+    const screenStream = new MediaStream();
     const entry: PeerEntry = {
       pc,
-      remoteStream,
       voiceStream,
+      screenStream,
       screenTracks: new Set<MediaStreamTrack>(),
       stopDetector: () => undefined,
     };
@@ -63,8 +63,12 @@ export class PeerManager {
     pc.ontrack = (e) => {
       const isScreen = (e.streams[0]?.getVideoTracks().length ?? 0) > 0;
       if (e.track.kind === 'audio') {
-        if (!remoteStream.getTracks().includes(e.track)) remoteStream.addTrack(e.track);
-        if (!isScreen && !voiceStream.getTracks().includes(e.track)) {
+        if (isScreen) {
+          // áudio do sistema vindo da tela compartilhada (vídeo/jogo) → só no stream da tela
+          for (const t of screenStream.getAudioTracks()) screenStream.removeTrack(t);
+          if (!screenStream.getTracks().includes(e.track)) screenStream.addTrack(e.track);
+        } else if (!voiceStream.getTracks().includes(e.track)) {
+          // voz do microfone → stream de voz separado (VAD somente aqui)
           voiceStream.addTrack(e.track);
           entry.stopDetector();
           const detector = new VoiceActivityDetector(voiceStream, { threshold: 0.008 });
@@ -75,14 +79,14 @@ export class PeerManager {
         }
       } else {
         // Vídeo remoto (screen share): substitui o vídeo anterior e acompanha o fim.
-        for (const t of remoteStream.getVideoTracks()) {
-          if (t !== e.track) remoteStream.removeTrack(t);
+        for (const t of screenStream.getVideoTracks()) {
+          if (t !== e.track) screenStream.removeTrack(t);
         }
-        if (!remoteStream.getTracks().includes(e.track)) remoteStream.addTrack(e.track);
+        if (!screenStream.getTracks().includes(e.track)) screenStream.addTrack(e.track);
         e.track.addEventListener(
           'ended',
           () => {
-            if (remoteStream.getTracks().includes(e.track)) remoteStream.removeTrack(e.track);
+            if (screenStream.getTracks().includes(e.track)) screenStream.removeTrack(e.track);
           },
           { once: true },
         );
@@ -158,9 +162,14 @@ export class PeerManager {
     }
   }
 
-  /** Retorna o stream de áudio remoto de um peer, se houver. */
-  getRemoteStream(userId: string): MediaStream | null {
-    return this.peers.get(userId)?.remoteStream ?? null;
+  /** Retorna o stream de VOZ de um peer (apenas o microfone). */
+  getVoiceStream(userId: string): MediaStream | null {
+    return this.peers.get(userId)?.voiceStream ?? null;
+  }
+
+  /** Retorna o stream de TELA de um peer (vídeo + som do sistema/screen). */
+  getScreenStream(userId: string): MediaStream | null {
+    return this.peers.get(userId)?.screenStream ?? null;
   }
 
   getPeerIds(): string[] {

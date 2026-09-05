@@ -67,8 +67,12 @@ export class VoiceSession {
     this.volume?.setSpeakerVolume(volume);
   }
 
-  getRemoteStream(userId: string): MediaStream | null {
-    return this.peers.getRemoteStream(userId);
+  getVoiceStream(userId: string): MediaStream | null {
+    return this.peers.getVoiceStream(userId);
+  }
+
+  getScreenStream(userId: string): MediaStream | null {
+    return this.peers.getScreenStream(userId);
   }
 
   publishScreenShare(stream: MediaStream): Promise<void> {

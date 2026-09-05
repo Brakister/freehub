@@ -17,6 +17,7 @@ const ClientEvent = {
   toggleMute: 'user:mute',
   startScreenShare: 'screen:start',
   stopScreenShare: 'screen:stop',
+  requestStopScreenShare: 'screen:request-stop',
   signaling: 'signaling:relay',
 } as const;
 
@@ -30,6 +31,8 @@ const ServerEvent = {
   userMuted: 'user:muted',
   screenShared: 'screen:shared',
   screenStopped: 'screen:stopped',
+  screenShareDenied: 'screen:share-denied',
+  screenShareRequested: 'screen:requested',
   signaling: 'signaling:relay',
   error: 'error',
 } as const;
@@ -237,7 +240,17 @@ async function startServer(): Promise<void> {
       const roomId = socket.data.roomId as string | undefined;
       if (!userId || !roomId) return;
       const session = sessions.get(roomId);
-      if (session) for (const u of session.users.values()) u.sharingScreen = u.id === userId;
+      if (!session) return;
+      const sharer = [...session.users.values()].find((u) => u.sharingScreen);
+      if (sharer && sharer.id !== userId) {
+        socket.emit(ServerEvent.screenShareDenied, {
+          sharerId: sharer.id,
+          sharerNickname: sharer.nickname,
+          message: 'Outra pessoa já está transmitindo. Peça para ela parar ou espere.',
+        });
+        return;
+      }
+      for (const u of session.users.values()) u.sharingScreen = u.id === userId;
       db.run('UPDATE users SET sharing_screen = 1 WHERE id = ?', [userId]);
       io.to(roomId).emit(ServerEvent.screenShared, { userId });
     });
@@ -250,6 +263,21 @@ async function startServer(): Promise<void> {
       if (session) for (const u of session.users.values()) u.sharingScreen = false;
       db.run('UPDATE users SET sharing_screen = 0 WHERE id = ?', [userId]);
       io.to(roomId).emit(ServerEvent.screenStopped, { userId });
+    });
+
+    socket.on(ClientEvent.requestStopScreenShare, () => {
+      const userId = socket.data.userId as string | undefined;
+      const roomId = socket.data.roomId as string | undefined;
+      if (!userId || !roomId) return;
+      const session = sessions.get(roomId);
+      if (!session) return;
+      const sharer = [...session.users.values()].find((u) => u.sharingScreen);
+      if (!sharer || sharer.id === userId) return;
+      const requester = session.users.get(userId);
+      io.to(sharer.socketId).emit(ServerEvent.screenShareRequested, {
+        requesterId: userId,
+        requesterNickname: requester?.nickname ?? 'Alguém',
+      });
     });
 
     socket.on(ClientEvent.signaling, (payload: { targetUserId?: string; signal?: unknown }) => {

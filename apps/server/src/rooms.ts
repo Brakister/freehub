@@ -133,16 +133,43 @@ export class RoomManager {
     this.io.to(roomId).emit(ServerEvent.userMuted, { userId, muted });
   }
 
+  findCurrentSharer(roomId: string): LiveUser | null {
+    const session = this.sessions.get(roomId);
+    if (!session) return null;
+    return [...session.users.values()].find((u) => u.sharingScreen) ?? null;
+  }
+
   startScreenShare(socket: Socket): void {
     const userId = socket.data.userId as string | undefined;
     const roomId = socket.data.roomId as string | undefined;
     if (!userId || !roomId) return;
     const session = this.sessions.get(roomId);
-    if (session) {
-      for (const u of session.users.values()) u.sharingScreen = u.id === userId;
+    if (!session) return;
+    const current = this.findCurrentSharer(roomId);
+    if (current && current.id !== userId) {
+      socket.emit(ServerEvent.screenShareDenied, {
+        sharerId: current.id,
+        sharerNickname: current.nickname,
+        message: 'Outra pessoa já está transmitindo. Peça para ela parar ou espere.',
+      });
+      return;
     }
+    for (const u of session.users.values()) u.sharingScreen = u.id === userId;
     this.db.setSharingScreen(userId, true);
     this.io.to(roomId).emit(ServerEvent.screenShared, { userId });
+  }
+
+  requestStopScreenShare(socket: Socket): void {
+    const userId = socket.data.userId as string | undefined;
+    const roomId = socket.data.roomId as string | undefined;
+    if (!userId || !roomId) return;
+    const current = this.findCurrentSharer(roomId);
+    if (!current || current.id === userId) return;
+    const requester = this.sessions.get(roomId)?.users.get(userId);
+    this.io.to(current.socketId).emit(ServerEvent.screenShareRequested, {
+      requesterId: userId,
+      requesterNickname: requester?.nickname ?? 'Alguém',
+    });
   }
 
   stopScreenShare(socket: Socket): void {
@@ -211,6 +238,7 @@ export function registerSocketHandlers(io: Server, manager: RoomManager): void {
 
     socket.on(ClientEvent.startScreenShare, () => manager.startScreenShare(socket));
     socket.on(ClientEvent.stopScreenShare, () => manager.stopScreenShare(socket));
+    socket.on(ClientEvent.requestStopScreenShare, () => manager.requestStopScreenShare(socket));
 
     socket.on(ClientEvent.signaling, (payload: { targetUserId: string; signal: unknown }) => {
       manager.relaySignal(socket, payload);
