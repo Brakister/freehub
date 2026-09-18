@@ -28,12 +28,18 @@ interface PeerEntry {
 export class PeerManager {
   private peers = new Map<string, PeerEntry>();
   private localStream: MediaStream | null = null;
+  private screenStream: MediaStream | null = null;
 
   constructor(private callbacks: PeerCallbacks) {}
 
   /** Define o stream de microfone local (deve ser chamado antes de createPeer). */
   setLocalStream(stream: MediaStream): void {
     this.localStream = stream;
+  }
+
+  /** Define o stream de tela para que novos peers recebam as tracks automaticamente. */
+  setScreenStream(stream: MediaStream | null): void {
+    this.screenStream = stream;
   }
 
   /** Cria (ou retorna) a conexão com um peer, já anexando o stream local. */
@@ -58,6 +64,13 @@ export class PeerManager {
 
     if (this.localStream) {
       this.localStream.getTracks().forEach((t) => pc.addTrack(t, this.localStream!));
+    }
+
+    if (this.screenStream) {
+      for (const track of this.screenStream.getTracks()) {
+        entry.screenTracks.add(track);
+        pc.addTrack(track, this.screenStream);
+      }
     }
 
     pc.onicecandidate = (e) => {
@@ -146,6 +159,7 @@ export class PeerManager {
    * voz dos demais continua tocando normalmente.
    */
   async publishScreenTrack(stream: MediaStream): Promise<void> {
+    this.screenStream = stream;
     for (const entry of this.peers.values()) {
       for (const track of stream.getTracks()) {
         if (entry.screenTracks.has(track)) continue;
@@ -171,6 +185,7 @@ export class PeerManager {
 
   /** Remove apenas as trilhas de screen share e renegocia (voz permanece). */
   async unpublishScreenTrack(): Promise<void> {
+    this.screenStream = null;
     for (const entry of this.peers.values()) {
       for (const sender of entry.pc.getSenders()) {
         if (sender.track && entry.screenTracks.has(sender.track)) {

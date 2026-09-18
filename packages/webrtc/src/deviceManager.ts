@@ -42,8 +42,8 @@ export async function enumerateAudioDevices(): Promise<MediaDevices> {
 /** Cria um stream a partir do dispositivo de microfone selecionado. */
 export async function getMicrophoneStream(deviceId?: string): Promise<MediaStream> {
   const constraints: MediaStreamConstraints = deviceId
-    ? { audio: { deviceId: { exact: deviceId } } }
-    : { audio: true };
+    ? { audio: { deviceId: { exact: deviceId }, echoCancellation: true, noiseSuppression: true, autoGainControl: true } }
+    : { audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } };
   return navigator.mediaDevices.getUserMedia(constraints);
 }
 

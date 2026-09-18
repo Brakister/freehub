@@ -93,10 +93,12 @@ export class VoiceSession {
   }
 
   publishScreenShare(stream: MediaStream): Promise<void> {
+    this.peers.setScreenStream(stream);
     return this.peers.publishScreenTrack(stream);
   }
 
   unpublishScreenShare(): Promise<void> {
+    this.peers.setScreenStream(null);
     return this.peers.unpublishScreenTrack();
   }
 

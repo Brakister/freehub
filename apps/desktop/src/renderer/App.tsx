@@ -178,11 +178,22 @@ function ScreenShareCard({
   const [expanded, setExpanded] = useState(false);
   const audioLevel = useAudioLevel(stream);
   useEffect(() => {
+    const el = ref.current;
+    if (el) el.volume = Math.min(1, Math.max(0, volume ?? 1));
+  }, [volume]);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (el) el.muted = true;
+  }, []);
+
+  useEffect(() => {
     const apply = (): void => {
       const stream = getStream();
       const el = ref.current;
       if (stream && el) {
         el.muted = muted;
+        el.volume = Math.min(1, Math.max(0, volume ?? 1));
         if (el.srcObject !== stream) el.srcObject = stream;
       }
       setHasStream(Boolean(stream));
@@ -191,7 +202,7 @@ function ScreenShareCard({
     apply();
     const timer = setInterval(apply, 500);
     return () => clearInterval(timer);
-  }, [getStream, muted]);
+  }, [getStream, muted, volume]);
   if (!hasStream) return null;
 
   const meterWidth = `${Math.round(audioLevel * 100)}%`;
