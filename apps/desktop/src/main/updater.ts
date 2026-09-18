@@ -68,9 +68,14 @@ function configure(): void {
 export function registerUpdater(): void {
   app.whenReady().then(() => {
     configure();
+    console.log('[updater] auto-update habilitado, verificando atualizações...');
     // Num app não-empacotado (dev) o autoUpdater falha esperado; apenas loga.
     autoUpdater.checkForUpdates().catch((err) => {
-      if (!app.isPackaged) console.log('[updater] desabilitado em dev:', err.message);
+      if (!app.isPackaged) {
+        console.log('[updater] desabilitado em dev:', err.message);
+      } else {
+        console.error('[updater] erro ao verificar atualizações:', err.message);
+      }
     });
   });
 }

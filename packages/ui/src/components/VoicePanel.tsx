@@ -11,6 +11,7 @@ interface VoicePanelProps {
   users: VoiceUserView[];
   muted: boolean;
   sharingScreen: boolean;
+  ping: number;
   onToggleMute(): void;
   onToggleScreenShare(): void;
   onLeaveRoom(): void;
@@ -117,7 +118,10 @@ export function VoiceParticipantTile(
         )}
       </div>
       {!props.isSelf && props.onVolumeChange && volumeMenuOpen && (
-        <div className="mt-2 flex w-full items-center gap-2 rounded bg-[#1e1f22] px-2 py-1.5">
+        <div
+          className="mt-2 flex w-full items-center gap-2 rounded bg-[#1e1f22] px-2 py-1.5"
+          onClick={(e) => e.stopPropagation()}
+        >
           <span className="text-[10px] text-[#b5bac1]">0</span>
           <input
             type="range"
@@ -132,6 +136,27 @@ export function VoiceParticipantTile(
           <span className="w-7 text-right text-[10px] text-[#b5bac1]">{Math.round(volume * 100)}%</span>
         </div>
       )}
+    </div>
+  );
+}
+
+function PingIndicator({ ping }: { ping: number }): React.JSX.Element {
+  const getColor = (): string => {
+    if (ping < 80) return 'text-green-400';
+    if (ping < 150) return 'text-orange-400';
+    return 'text-red-400';
+  };
+
+  const getDotColor = (): string => {
+    if (ping < 80) return 'bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.8)]';
+    if (ping < 150) return 'bg-orange-400 shadow-[0_0_6px_rgba(251,146,60,0.8)]';
+    return 'bg-red-400 shadow-[0_0_6px_rgba(248,113,113,0.8)]';
+  };
+
+  return (
+    <div className="flex items-center gap-1.5" title={`Ping: ${ping}ms`}>
+      <span className={`h-2 w-2 rounded-full ${getDotColor()}`} />
+      <span className={`text-xs font-medium ${getColor()}`}>{ping}ms</span>
     </div>
   );
 }
@@ -174,7 +199,9 @@ export function VoicePanel(props: VoicePanelProps): React.JSX.Element {
         </div>
       </div>
 
-      <footer className="flex items-center justify-center gap-3 border-t border-black/30 px-6 py-4">
+      <footer className="flex items-center justify-between border-t border-black/30 px-6 py-4">
+        <PingIndicator ping={props.ping} />
+        <div className="flex items-center gap-3">
         <button
           onClick={props.onToggleMute}
           data-testid="mute-button"
@@ -241,6 +268,7 @@ export function VoicePanel(props: VoicePanelProps): React.JSX.Element {
             <path d="M14 3h6v18h-6" />
           </svg>
         </button>
+        </div>
       </footer>
     </div>
   );

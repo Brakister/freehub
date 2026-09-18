@@ -14,6 +14,8 @@ export interface Settings {
   serverUrl: string;
   /** Qualidade da tela compartilhada (id em SCREEN_QUALITIES). */
   screenQualityId: string;
+  /** Capturar áudio do sistema ao compartilhar tela. */
+  captureSystemAudio: boolean;
 }
 
 interface SettingsState extends Settings {
@@ -24,6 +26,7 @@ interface SettingsState extends Settings {
   setSpeakerVolume(value: number): void;
   setServerUrl(value: string): void;
   setScreenQualityId(value: string): void;
+  setCaptureSystemAudio(value: boolean): void;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -34,6 +37,7 @@ export const DEFAULT_SETTINGS: Settings = {
   speakerVolume: 1,
   serverUrl: '',
   screenQualityId: DEFAULT_SCREEN_QUALITY_ID,
+  captureSystemAudio: true,
 };
 
 export const useSettings = create<SettingsState>()(
@@ -47,10 +51,11 @@ export const useSettings = create<SettingsState>()(
       setSpeakerVolume: (speakerVolume) => set({ speakerVolume }),
       setServerUrl: (serverUrl) => set({ serverUrl }),
       setScreenQualityId: (screenQualityId) => set({ screenQualityId }),
+      setCaptureSystemAudio: (captureSystemAudio) => set({ captureSystemAudio }),
     }),
     {
       name: 'freehub-settings',
-      version: 2,
+      version: 3,
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<Settings>;
         return {
@@ -58,6 +63,7 @@ export const useSettings = create<SettingsState>()(
           ...p,
           serverUrl: p.serverUrl ?? '',
           screenQualityId: p.screenQualityId ?? DEFAULT_SCREEN_QUALITY_ID,
+          captureSystemAudio: p.captureSystemAudio ?? true,
         };
       },
     },

@@ -87,7 +87,9 @@ app.whenReady().then(() => {
     void pickDesktopSource().then((source) => {
       if (source) {
         // video = tela/janela escolhida; audio 'loopback' = áudio do sistema.
-        callback({ video: source, audio: 'loopback' });
+        // O renderer controla se solicita áudio via constraints.
+        const requestAudio = _request.audioConstraints !== false;
+        callback({ video: source, audio: requestAudio ? 'loopback' : false });
       } else {
         callback({});
       }

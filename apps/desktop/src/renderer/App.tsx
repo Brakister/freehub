@@ -160,6 +160,8 @@ function ScreenShareCard({
   onStop,
   muted,
   miniUsers = [],
+  volume,
+  onVolumeChange,
 }: {
   getStream: () => MediaStream | null;
   title: string;
@@ -167,6 +169,8 @@ function ScreenShareCard({
   onStop?: () => void;
   muted: boolean;
   miniUsers?: VoiceUserView[];
+  volume?: number;
+  onVolumeChange?: (volume: number) => void;
 }): React.JSX.Element | null {
   const ref = useRef<HTMLVideoElement>(null);
   const [hasStream, setHasStream] = useState(false);
@@ -212,6 +216,22 @@ function ScreenShareCard({
             </div>
             <div className="flex shrink-0 items-center gap-2">
               {meter}
+              {onVolumeChange && (
+                <div className="flex items-center gap-1.5 rounded bg-black/40 px-2 py-1">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[#b5bac1]">
+                    <path d="M4 9v6h4l5 4V5L8 9H4Z" />
+                  </svg>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    value={volume ?? 1}
+                    onChange={(e) => onVolumeChange(Number(e.target.value))}
+                    className="w-16 accent-[#5865f2]"
+                  />
+                </div>
+              )}
               {showStop && onStop && (
                 <button
                   onClick={onStop}
@@ -268,6 +288,22 @@ function ScreenShareCard({
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {meter}
+          {onVolumeChange && (
+            <div className="flex items-center gap-1 rounded bg-black/40 px-1.5 py-0.5">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[#b5bac1]">
+                <path d="M4 9v6h4l5 4V5L8 9H4Z" />
+              </svg>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.01"
+                value={volume ?? 1}
+                onChange={(e) => onVolumeChange(Number(e.target.value))}
+                className="w-14 accent-[#5865f2]"
+              />
+            </div>
+          )}
           <button
             onClick={() => setExpanded(true)}
             className="rounded bg-black/60 px-2 py-1 text-xs font-semibold text-white transition hover:bg-black/80"
@@ -300,6 +336,7 @@ export default function App(): React.JSX.Element {
     screenshare,
     error,
     settingsOpen,
+    ping,
   } = useConnectionStore();
   const nickname = useSettings((s) => s.nickname);
   const inputDeviceId = useSettings((s) => s.inputDeviceId);
@@ -308,6 +345,7 @@ export default function App(): React.JSX.Element {
   const outputDeviceId = useSettings((s) => s.outputDeviceId);
   const serverUrl = useSettings((s) => s.serverUrl);
   const screenQualityId = useSettings((s) => s.screenQualityId);
+  const captureSystemAudio = useSettings((s) => s.captureSystemAudio);
 
   const sessionRef = useRef<VoiceSession | null>(null);
   const screenStreamRef = useRef<MediaStream | null>(null);
@@ -320,6 +358,7 @@ export default function App(): React.JSX.Element {
   } | null>(null);
   const [shareRequestedBy, setShareRequestedBy] = useState<string | null>(null);
   const [userVolumes, setUserVolumes] = useState<Record<string, number>>({});
+  const [screenShareVolume, setScreenShareVolume] = useState<number>(1);
 
   const ensureSession = useCallback(async (deviceId: string): Promise<VoiceSession> => {
     if (sessionRef.current) {
@@ -392,7 +431,9 @@ export default function App(): React.JSX.Element {
           height: { ideal: quality.height },
           frameRate: { ideal: quality.frameRate },
         },
-        audio: { suppressLocalAudioPlayback: true } as MediaTrackConstraints,
+        audio: captureSystemAudio
+          ? ({ suppressLocalAudioPlayback: true } as MediaTrackConstraints)
+          : false,
       });
       await session.publishScreenShare(stream);
       screenStreamRef.current = stream;
@@ -636,6 +677,7 @@ export default function App(): React.JSX.Element {
               users={voiceUsers}
               muted={muted}
               sharingScreen={isScreenSharing}
+              ping={ping}
               onToggleMute={() => useConnectionStore.getState().toggleMute()}
               onToggleScreenShare={() => void handleToggleScreenShare()}
               onLeaveRoom={handleLeaveRoom}
@@ -664,6 +706,8 @@ export default function App(): React.JSX.Element {
                   showStop={false}
                   muted={false}
                   miniUsers={voiceUsers}
+                  volume={screenShareVolume}
+                  onVolumeChange={setScreenShareVolume}
                 />
               ))}
             {users

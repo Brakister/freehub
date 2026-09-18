@@ -16,6 +16,9 @@ interface PeerEntry {
   screenStream: MediaStream;
   screenTracks: Set<MediaStreamTrack>;
   stopDetector: () => void;
+  voiceDetectorStarted: boolean;
+  negotiating: boolean;
+  pendingRenegotiation: boolean;
 }
 
 /**
@@ -47,6 +50,9 @@ export class PeerManager {
       screenStream,
       screenTracks: new Set<MediaStreamTrack>(),
       stopDetector: () => undefined,
+      voiceDetectorStarted: false,
+      negotiating: false,
+      pendingRenegotiation: false,
     };
     this.peers.set(userId, entry);
 
@@ -64,21 +70,20 @@ export class PeerManager {
       const isScreen = (e.streams[0]?.getVideoTracks().length ?? 0) > 0;
       if (e.track.kind === 'audio') {
         if (isScreen) {
-          // áudio do sistema vindo da tela compartilhada (vídeo/jogo) → só no stream da tela
           for (const t of screenStream.getAudioTracks()) screenStream.removeTrack(t);
           if (!screenStream.getTracks().includes(e.track)) screenStream.addTrack(e.track);
         } else if (!voiceStream.getTracks().includes(e.track)) {
-          // voz do microfone → stream de voz separado (VAD somente aqui)
           voiceStream.addTrack(e.track);
-          entry.stopDetector();
-          const detector = new VoiceActivityDetector(voiceStream, { threshold: 0.008 });
-          detector.onChange((speaking, level) =>
-            this.callbacks.onSpeakingChange?.(userId, speaking, level),
-          );
-          entry.stopDetector = detector.start();
+          if (!entry.voiceDetectorStarted) {
+            entry.voiceDetectorStarted = true;
+            const detector = new VoiceActivityDetector(voiceStream, { threshold: 0.008 });
+            detector.onChange((speaking, level) =>
+              this.callbacks.onSpeakingChange?.(userId, speaking, level),
+            );
+            entry.stopDetector = detector.start();
+          }
         }
       } else {
-        // Vídeo remoto (screen share): substitui o vídeo anterior e acompanha o fim.
         for (const t of screenStream.getVideoTracks()) {
           if (t !== e.track) screenStream.removeTrack(t);
         }
@@ -113,7 +118,7 @@ export class PeerManager {
       await pc.setLocalDescription(answer);
       this.callbacks.sendSignal(userId, { type: 'answer', sdp: answer.sdp });
     } else if (s.type === 'answer') {
-      if (pc.signalingState !== 'stable') {
+      if (pc.signalingState === 'have-local-offer') {
         await pc.setRemoteDescription({ type: 'answer', sdp: s.sdp });
       }
     } else if (s.type === 'ice-candidate' && s.candidate) {
@@ -124,9 +129,15 @@ export class PeerManager {
   /** Inicia a negociação criando uma oferta para o peer. */
   async call(userId: string): Promise<void> {
     const pc = this.ensurePeer(userId);
-    const offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
-    this.callbacks.sendSignal(userId, { type: 'offer', sdp: offer.sdp });
+    const entry = this.peers.get(userId);
+    if (!entry) return;
+    try {
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      this.callbacks.sendSignal(userId, { type: 'offer', sdp: offer.sdp });
+    } catch (err) {
+      console.error('[peer] failed to create offer:', err);
+    }
   }
 
   /**
@@ -142,8 +153,19 @@ export class PeerManager {
         entry.pc.addTrack(track, stream);
       }
     }
-    for (const userId of this.getPeerIds()) {
-      await this.call(userId);
+    for (const [userId, entry] of this.peers) {
+      if (!entry.negotiating) {
+        entry.negotiating = true;
+        void this.call(userId).finally(() => {
+          entry.negotiating = false;
+          if (entry.pendingRenegotiation) {
+            entry.pendingRenegotiation = false;
+            void this.call(userId);
+          }
+        });
+      } else {
+        entry.pendingRenegotiation = true;
+      }
     }
   }
 
@@ -157,8 +179,19 @@ export class PeerManager {
       }
       entry.screenTracks.clear();
     }
-    for (const userId of this.getPeerIds()) {
-      await this.call(userId);
+    for (const [userId, entry] of this.peers) {
+      if (!entry.negotiating) {
+        entry.negotiating = true;
+        void this.call(userId).finally(() => {
+          entry.negotiating = false;
+          if (entry.pendingRenegotiation) {
+            entry.pendingRenegotiation = false;
+            void this.call(userId);
+          }
+        });
+      } else {
+        entry.pendingRenegotiation = true;
+      }
     }
   }
 

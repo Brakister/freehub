@@ -23,6 +23,7 @@ interface ConnectionState {
   screenshare: ScreenshareInfo | null;
   error: string | null;
   settingsOpen: boolean;
+  ping: number;
 
   markConnected(connected: boolean, status: ConnectionStatus): void;
   setError(message: string | null): void;
@@ -37,6 +38,7 @@ interface ConnectionState {
   leaveRoom(): void;
   toggleMute(): void;
   setSpeaking(userId: string, speaking: boolean): void;
+  setPing(ping: number): void;
   reset(): void;
   openSettings(): void;
   closeSettings(): void;
@@ -53,6 +55,7 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
   screenshare: null,
   error: null,
   settingsOpen: false,
+  ping: 0,
 
   markConnected: (connected, status) => set({ connected, status, error: null }),
   setError: (message) => set({ error: message, status: message ? 'disconnected' : get().status }),
@@ -143,6 +146,8 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
       return { speaking: { ...s.speaking, [userId]: speaking } };
     }),
 
+  setPing: (ping) => set({ ping }),
+
   reset: () =>
     set({
       selfId: null,
@@ -152,6 +157,7 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
       muted: false,
       screenshare: null,
       error: null,
+      ping: 0,
     }),
 
   openSettings: () => set({ settingsOpen: true }),

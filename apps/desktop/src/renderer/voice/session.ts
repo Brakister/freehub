@@ -4,6 +4,7 @@ import {
   PeerManager,
   VoiceActivityDetector,
   VolumeController,
+  PingMonitor,
 } from '@freehub/webrtc';
 import { getSocket } from '../net/socket';
 import { useConnectionStore } from '../stores/useConnectionStore';
@@ -19,6 +20,7 @@ export class VoiceSession {
   private processedStream: MediaStream | null = null;
   private localVad: VoiceActivityDetector | null = null;
   private stopLocalVad: (() => void) | null = null;
+  private pingMonitor: PingMonitor | null = null;
 
   constructor(readonly inputDeviceId: string) {
     this.peers = new PeerManager({
@@ -38,8 +40,23 @@ export class VoiceSession {
     this.peers.setLocalStream(this.processedStream);
   }
 
+  startPingMonitor(): void {
+    if (this.pingMonitor) return;
+    this.pingMonitor = new PingMonitor();
+    this.pingMonitor.onPing((pingMs) => {
+      useConnectionStore.getState().setPing(pingMs);
+    });
+    this.pingMonitor.start(getSocket());
+  }
+
+  stopPingMonitor(): void {
+    this.pingMonitor?.stop();
+    this.pingMonitor = null;
+  }
+
   onJoinedRoom(users: User[], selfId: string): void {
     this.startLocalVad();
+    this.startPingMonitor();
     for (const u of users) {
       if (u.id !== selfId) void this.peers.call(u.id);
     }
@@ -100,6 +117,7 @@ export class VoiceSession {
     this.stopLocalVad?.();
     this.stopLocalVad = null;
     this.localVad = null;
+    this.stopPingMonitor();
     this.peers.closeAll();
     this.rawStream?.getTracks().forEach((t) => t.stop());
     this.rawStream = null;

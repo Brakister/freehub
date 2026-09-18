@@ -188,6 +188,32 @@ export function SettingsModal(props: SettingsModalProps): React.JSX.Element | nu
 
           <section>
             <label className="mb-1 flex items-center justify-between text-xs font-semibold text-[#949ba4]">
+              <span>Áudio do sistema na transmissão</span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={settings.captureSystemAudio}
+                onClick={() => settings.setCaptureSystemAudio(!settings.captureSystemAudio)}
+                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full transition ${
+                  settings.captureSystemAudio ? 'bg-[#23a559]' : 'bg-[#4e5058]'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
+                    settings.captureSystemAudio ? 'translate-x-4' : 'translate-x-0.5'
+                  } mt-0.5`}
+                />
+              </button>
+            </label>
+            <p className="mt-1 text-[11px] leading-relaxed text-[#949ba4]">
+              {settings.captureSystemAudio
+                ? 'Áudio do sistema será capturado (jogos, vídeos, etc). Nota: áudio de chamadas como Discord também pode ser capturado.'
+                : 'Apenas o vídeo da tela será transmitido, sem áudio do sistema.'}
+            </p>
+          </section>
+
+          <section>
+            <label className="mb-1 flex items-center justify-between text-xs font-semibold text-[#949ba4]">
               <span>Volume do microfone</span>
               <span className="font-mono">{Math.round(settings.micGain * 100)}%</span>
             </label>
