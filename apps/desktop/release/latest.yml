@@ -3,6 +3,6 @@ path: Freehub-1.3.2-win.zip
 sha512: 8d3e79d7e8650d9db92d996f16adb978b1e32ec42e2164f7711a7406ccdac97df60f3e2da98cd3e327157747e607f05a88f241eb57f49fe10ea72498c0c1d5b5
 releaseDate: '2026-09-18T23:13:37.000Z'
 files:
-  - url: Freehub-1.3.2-win.zip
+  - url: https://github.com/Brakister/freehub/releases/download/v1.3.2/Freehub-1.3.2-win.zip
     sha512: 8d3e79d7e8650d9db92d996f16adb978b1e32ec42e2164f7711a7406ccdac97df60f3e2da98cd3e327157747e607f05a88f241eb57f49fe10ea72498c0c1d5b5
     size: 122012279
