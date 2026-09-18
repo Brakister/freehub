@@ -86,10 +86,7 @@ app.whenReady().then(() => {
   session.defaultSession.setDisplayMediaRequestHandler((_request, callback) => {
     void pickDesktopSource().then((source) => {
       if (source) {
-        // video = tela/janela escolhida; audio 'loopback' = áudio do sistema.
-        // O renderer controla se solicita áudio via constraints.
-        const requestAudio = _request.audioConstraints !== false;
-        callback({ video: source, audio: requestAudio ? 'loopback' : false });
+        callback({ video: source, audio: 'loopback' });
       } else {
         callback({});
       }
