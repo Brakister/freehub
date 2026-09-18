@@ -9,7 +9,7 @@
   "asar": true,
   "asarUnpack": ["node_modules/sql.js/**/*"],
   "win": {
-    "target": ["nsis"],
+    "target": ["zip"],
     "signAndEditExecutable": false,
     "publish": [
       {

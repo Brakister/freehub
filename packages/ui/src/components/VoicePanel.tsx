@@ -1,9 +1,17 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import type { User } from '@freehub/shared';
 
 export interface VoiceUserView extends User {
   speaking: boolean;
   isSelf: boolean;
+}
+
+export interface ChatMessage {
+  userId: string;
+  nickname: string;
+  avatarUrl?: string;
+  text: string;
+  timestamp: number;
 }
 
 interface VoicePanelProps {
@@ -17,6 +25,8 @@ interface VoicePanelProps {
   onLeaveRoom(): void;
   userVolumes: Record<string, number>;
   onUserVolumeChange(userId: string, volume: number): void;
+  chatMessages: ChatMessage[];
+  onChatSend(text: string): void;
 }
 
 export function SpeakingIndicator({ active }: { active: boolean }): React.JSX.Element {
@@ -33,10 +43,12 @@ export function SpeakingIndicator({ active }: { active: boolean }): React.JSX.El
 
 function Avatar({
   nickname,
+  avatarUrl,
   speaking,
   muted,
 }: {
   nickname: string;
+  avatarUrl?: string;
   speaking: boolean;
   muted: boolean;
 }): React.JSX.Element {
@@ -44,10 +56,14 @@ function Avatar({
     ? 'ring-2 ring-green-400 shadow-[0_0_14px_rgba(74,222,128,0.8)]'
     : 'ring-2 ring-[#3a3d41]';
   return (
-    <div className={`relative mx-auto h-20 w-20 ${ring} rounded-full bg-[#5865f2] transition`}>
-      <div className="flex h-full w-full items-center justify-center text-2xl font-semibold text-white">
-        {nickname.charAt(0).toUpperCase()}
-      </div>
+    <div className={`relative mx-auto h-20 w-20 ${ring} rounded-full bg-[#5865f2] transition overflow-hidden`}>
+      {avatarUrl ? (
+        <img src={avatarUrl} alt={nickname} className="h-full w-full object-cover" />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center text-2xl font-semibold text-white">
+          {nickname.charAt(0).toUpperCase()}
+        </div>
+      )}
       {muted && (
         <span className="absolute -bottom-1 -right-1 rounded-full bg-[#1e1f22] p-1" title="Mutado">
           <svg
@@ -84,7 +100,7 @@ export function VoiceParticipantTile(
         props.speaking ? 'bg-[#283032]' : ''
       }`}
     >
-      <Avatar nickname={props.nickname} speaking={props.speaking} muted={props.muted} />
+      <Avatar nickname={props.nickname} avatarUrl={props.avatarUrl} speaking={props.speaking} muted={props.muted} />
       <div className="mt-3 flex w-full items-center justify-center gap-2 text-sm font-medium text-[#dbdee1]">
         <SpeakingIndicator active={props.speaking} />
         <span className="max-w-[120px] truncate">{props.nickname}</span>
@@ -162,6 +178,20 @@ function PingIndicator({ ping }: { ping: number }): React.JSX.Element {
 }
 
 export function VoicePanel(props: VoicePanelProps): React.JSX.Element {
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const [chatInput, setChatInput] = useState('');
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [props.chatMessages]);
+
+  const handleSend = (): void => {
+    const text = chatInput.trim();
+    if (!text) return;
+    props.onChatSend(text);
+    setChatInput('');
+  };
+
   return (
     <div className="flex h-full flex-col bg-[#313338]">
       <header className="flex items-center justify-between border-b border-black/30 px-6 py-3 shadow-sm">
@@ -197,11 +227,56 @@ export function VoicePanel(props: VoicePanelProps): React.JSX.Element {
             />
           ))}
         </div>
+
+        <div className="mt-8 border-t border-black/30 pt-6">
+          <div className="flex items-center gap-2 mb-3">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[#949ba4]">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+            <span className="text-sm font-semibold text-[#949ba4]">Chat</span>
+          </div>
+          <div className="flex flex-col gap-2 bg-[#2b2d31] rounded-lg p-3" style={{maxHeight: '200px', overflowY: 'auto'}}>
+            {props.chatMessages.length === 0 && (
+              <span className="text-xs text-[#80848e]">Sem mensagens ainda</span>
+            )}
+            {props.chatMessages.map((msg, i) => (
+              <div key={i} className="flex items-start gap-2">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-[#dbdee1]">{msg.nickname}</span>
+                    <span className="text-[10px] text-[#80848e]">{new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</span>
+                  </div>
+                  <p className="text-sm text-[#dbdee1] mt-0.5">{msg.text}</p>
+                </div>
+              </div>
+            ))}
+            <div ref={chatEndRef} />
+          </div>
+        </div>
       </div>
 
       <footer className="flex items-center justify-between border-t border-black/30 px-6 py-4">
         <PingIndicator ping={props.ping} />
         <div className="flex items-center gap-3">
+          <div className="flex items-center rounded bg-[#2b2d31] px-3 py-1.5">
+            <input
+              type="text"
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleSend(); }}
+              placeholder="Digite uma mensagem..."
+              className="w-48 bg-transparent text-sm text-white placeholder-[#6b7280] outline-none"
+            />
+            <button
+              onClick={handleSend}
+              className="ml-2 text-[#5865f2] hover:text-white transition"
+              title="Enviar"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z" />
+              </svg>
+            </button>
+          </div>
         <button
           onClick={props.onToggleMute}
           data-testid="mute-button"

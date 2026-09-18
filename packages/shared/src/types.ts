@@ -5,6 +5,8 @@ export interface User {
   joinTime: number;
   /** True quando este usuário está compartilhando a tela */
   sharingScreen: boolean;
+  /** URL da foto de perfil (base64 data URL) */
+  avatarUrl?: string;
 }
 
 export interface Room {

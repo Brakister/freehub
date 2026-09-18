@@ -57,3 +57,11 @@ export interface SignalingPayload {
 export interface PingPayload {
   timestamp: number;
 }
+
+export interface ChatMessagePayload {
+  userId: string;
+  nickname: string;
+  avatarUrl?: string;
+  text: string;
+  timestamp: number;
+}

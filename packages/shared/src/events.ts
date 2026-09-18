@@ -9,6 +9,8 @@ export const ClientEvent = {
   requestStopScreenShare: 'screen:request-stop',
   signaling: 'signaling:relay',
   ping: 'ping',
+  chatMessage: 'chat:message',
+  setAvatar: 'set-avatar',
 } as const;
 
 export type ClientEvent = (typeof ClientEvent)[keyof typeof ClientEvent];
@@ -29,6 +31,7 @@ export const ServerEvent = {
   screenShareRequested: 'screen:requested',
   signaling: 'signaling:relay',
   error: 'error',
+  chatMessage: 'chat:message',
 } as const;
 
 export type ServerEvent = (typeof ServerEvent)[keyof typeof ServerEvent];

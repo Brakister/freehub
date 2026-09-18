@@ -16,6 +16,8 @@ export interface Settings {
   screenQualityId: string;
   /** Capturar áudio do sistema ao compartilhar tela. */
   captureSystemAudio: boolean;
+  /** URL da foto de perfil (base64 data URL). */
+  avatarUrl: string;
 }
 
 interface SettingsState extends Settings {
@@ -27,6 +29,7 @@ interface SettingsState extends Settings {
   setServerUrl(value: string): void;
   setScreenQualityId(value: string): void;
   setCaptureSystemAudio(value: boolean): void;
+  setAvatarUrl(value: string): void;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -38,6 +41,7 @@ export const DEFAULT_SETTINGS: Settings = {
   serverUrl: '',
   screenQualityId: DEFAULT_SCREEN_QUALITY_ID,
   captureSystemAudio: true,
+  avatarUrl: '',
 };
 
 export const useSettings = create<SettingsState>()(
@@ -52,10 +56,11 @@ export const useSettings = create<SettingsState>()(
       setServerUrl: (serverUrl) => set({ serverUrl }),
       setScreenQualityId: (screenQualityId) => set({ screenQualityId }),
       setCaptureSystemAudio: (captureSystemAudio) => set({ captureSystemAudio }),
+      setAvatarUrl: (avatarUrl) => set({ avatarUrl }),
     }),
     {
       name: 'freehub-settings',
-      version: 3,
+      version: 4,
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<Settings>;
         return {
@@ -64,6 +69,7 @@ export const useSettings = create<SettingsState>()(
           serverUrl: p.serverUrl ?? '',
           screenQualityId: p.screenQualityId ?? DEFAULT_SCREEN_QUALITY_ID,
           captureSystemAudio: p.captureSystemAudio ?? true,
+          avatarUrl: p.avatarUrl ?? '',
         };
       },
     },

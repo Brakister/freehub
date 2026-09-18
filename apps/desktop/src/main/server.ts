@@ -19,11 +19,15 @@ const ClientEvent = {
   stopScreenShare: 'screen:stop',
   requestStopScreenShare: 'screen:request-stop',
   signaling: 'signaling:relay',
+  ping: 'ping',
+  chatMessage: 'chat:message',
+  setAvatar: 'set-avatar',
 } as const;
 
 const ServerEvent = {
   roomCreated: 'room:created',
   roomJoined: 'room:joined',
+  roomLeft: 'room:left',
   roomFull: 'room:full',
   roomNotFound: 'room:not-found',
   userJoined: 'user:joined',
@@ -35,6 +39,7 @@ const ServerEvent = {
   screenShareRequested: 'screen:requested',
   signaling: 'signaling:relay',
   error: 'error',
+  chatMessage: 'chat:message',
 } as const;
 
 /* ---- room state (SQLite em memória via sql.js) ---- */
@@ -52,6 +57,7 @@ interface LiveUser {
   sharingScreen: boolean;
   joinTime: number;
   socketId: string;
+  avatarUrl?: string;
 }
 
 interface RoomSession {
@@ -145,12 +151,13 @@ async function startServer(): Promise<void> {
 
   const io = new SocketIOServer(http, { cors: { origin: '*' } });
 
-  const toUser = (u: LiveUser): { id: string; nickname: string; muted: boolean; sharingScreen: boolean; joinTime: number } => ({
+  const toUser = (u: LiveUser): { id: string; nickname: string; muted: boolean; sharingScreen: boolean; joinTime: number; avatarUrl?: string } => ({
     id: u.id,
     nickname: u.nickname,
     muted: u.muted,
     sharingScreen: u.sharingScreen,
     joinTime: u.joinTime,
+    avatarUrl: u.avatarUrl,
   });
 
   const leaveRoom = (socket: import('socket.io').Socket): void => {
@@ -288,6 +295,35 @@ async function startServer(): Promise<void> {
       const target = session.users.get(payload.targetUserId);
       if (!target) return;
       io.to(target.socketId).emit(ServerEvent.signaling, { targetUserId: socket.data.userId, signal: payload.signal });
+    });
+
+    socket.on(ClientEvent.chatMessage, (payload: { text: string }) => {
+      const userId = socket.data.userId as string | undefined;
+      const roomId = socket.data.roomId as string | undefined;
+      if (!userId || !roomId) return;
+      const session = sessions.get(roomId);
+      if (!session) return;
+      const user = session.users.get(userId);
+      if (!user) return;
+      io.to(roomId).emit(ServerEvent.chatMessage, {
+        userId: user.id,
+        nickname: user.nickname,
+        avatarUrl: user.avatarUrl,
+        text: payload.text,
+        timestamp: Date.now(),
+      });
+    });
+
+    socket.on(ClientEvent.setAvatar, (payload: { avatarUrl: string }) => {
+      const userId = socket.data.userId as string | undefined;
+      const roomId = socket.data.roomId as string | undefined;
+      if (!userId || !roomId) return;
+      const session = sessions.get(roomId);
+      if (!session) return;
+      const user = session.users.get(userId);
+      if (!user) return;
+      user.avatarUrl = payload.avatarUrl;
+      io.to(roomId).emit(ServerEvent.userJoined, toUser(user));
     });
 
     socket.on('disconnect', () => leaveRoom(socket));

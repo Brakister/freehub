@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ClientEvent, ServerEvent, SCREEN_QUALITIES, DEFAULT_SCREEN_QUALITY_ID, type RoomState, type User } from '@freehub/shared';
-import { SettingsModal, Sidebar, VoicePanel, type VoiceUserView, useSettings } from '@freehub/ui';
+import { SettingsModal, Sidebar, VoicePanel, type VoiceUserView, type ChatMessage, useSettings } from '@freehub/ui';
 import { getSocket } from './net/socket';
 import { useConnectionStore, type RoomInfo } from './stores/useConnectionStore';
 import { VoiceSession } from './voice/session';
@@ -176,7 +176,7 @@ function ScreenShareCard({
   const [hasStream, setHasStream] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [expanded, setExpanded] = useState(false);
-  const audioLevel = useAudioLevel(stream);
+  const audioLevel = muted ? 0 : useAudioLevel(stream);
   useEffect(() => {
     const el = ref.current;
     if (el) el.volume = Math.min(1, Math.max(0, volume ?? 1));
@@ -370,6 +370,8 @@ export default function App(): React.JSX.Element {
   const [shareRequestedBy, setShareRequestedBy] = useState<string | null>(null);
   const [userVolumes, setUserVolumes] = useState<Record<string, number>>({});
   const [screenShareVolume, setScreenShareVolume] = useState<number>(1);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const avatarUrl = useSettings((s) => s.avatarUrl);
 
   const ensureSession = useCallback(async (deviceId: string): Promise<VoiceSession> => {
     if (sessionRef.current) {
@@ -403,13 +405,19 @@ export default function App(): React.JSX.Element {
     }
   };
 
-  const handleLeaveRoom = (): void => {
-    setShareNotice(null);
-    setShareRequestedBy(null);
-    void sessionRef.current?.dispose();
-    sessionRef.current = null;
-    useConnectionStore.getState().leaveRoom();
-  };
+   const handleLeaveRoom = (): void => {
+     setShareNotice(null);
+     setShareRequestedBy(null);
+     void sessionRef.current?.dispose();
+     sessionRef.current = null;
+     useConnectionStore.getState().leaveRoom();
+   };
+
+   const handleChatSend = useCallback((text: string): void => {
+     const socket = getSocket();
+     if (!socket.connected) return;
+     socket.emit(ClientEvent.chatMessage, { text });
+   }, []);
 
   const handleToggleScreenShare = async (): Promise<void> => {
     const session = sessionRef.current;
@@ -540,6 +548,10 @@ export default function App(): React.JSX.Element {
       setShareRequestedBy(requesterNickname ?? 'Alguém');
       setShareNotice(null);
     };
+    const onChatMessage = (p: Payload): void => {
+      const msg = p as ChatMessage;
+      setChatMessages((current) => [...current, msg]);
+    };
     const onSignaling = (p: Payload): void => {
       const payload = p as { targetUserId: string; signal: unknown };
       sessionRef.current?.onSignal(payload.targetUserId, payload.signal);
@@ -566,12 +578,13 @@ export default function App(): React.JSX.Element {
       [ServerEvent.screenShared, onScreenShared],
       [ServerEvent.screenStopped, onScreenStopped],
       [ServerEvent.screenShareDenied, onScreenShareDenied],
-      [ServerEvent.screenShareRequested, onScreenShareRequested],
-      [ServerEvent.signaling, onSignaling],
-      [ServerEvent.error, onRoomError('Erro do servidor.')],
-      [ServerEvent.roomNotFound, onRoomError('Sala não encontrada.')],
-      [ServerEvent.roomFull, onRoomError('Sala cheia.')],
-    ];
+       [ServerEvent.screenShareRequested, onScreenShareRequested],
+       [ServerEvent.signaling, onSignaling],
+       [ServerEvent.chatMessage, onChatMessage],
+       [ServerEvent.error, onRoomError('Erro do servidor.')],
+       [ServerEvent.roomNotFound, onRoomError('Sala não encontrada.')],
+       [ServerEvent.roomFull, onRoomError('Sala cheia.')],
+     ];
 
     const listeners: Array<[string, (payload?: unknown) => void]> = [...plain, ...payloadHandlers];
     for (const [event, handler] of listeners)
@@ -622,6 +635,13 @@ export default function App(): React.JSX.Element {
       }
     })();
   }, [inputDeviceId, ensureSession, micGain, speakerVolume]);
+
+  useEffect(() => {
+    if (!avatarUrl || !useConnectionStore.getState().room) return;
+    const socket = getSocket();
+    if (!socket.connected) return;
+    socket.emit(ClientEvent.setAvatar, { avatarUrl });
+  }, [avatarUrl]);
 
   const voiceUsers: VoiceUserView[] = useMemo(
     () => users.map((u) => ({ ...u, speaking: speaking[u.id] ?? false, isSelf: u.id === selfId })),
@@ -696,6 +716,8 @@ export default function App(): React.JSX.Element {
               onUserVolumeChange={(userId, volume) =>
                 setUserVolumes((current) => ({ ...current, [userId]: volume }))
               }
+              chatMessages={chatMessages}
+              onChatSend={handleChatSend}
             />
             {screenshare &&
               (screenshare.userId === selfId ? (

@@ -244,6 +244,43 @@ export function SettingsModal(props: SettingsModalProps): React.JSX.Element | nu
             />
           </section>
 
+          <section>
+            <label className="mb-1 block text-xs font-semibold text-[#949ba4]">
+              Foto de perfil
+            </label>
+            <div className="flex items-center gap-3">
+              <div className="h-12 w-12 rounded-full bg-[#5865f2] overflow-hidden border-2 border-[#3a3d41]">
+                {settings.avatarUrl ? (
+                  <img src={settings.avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-white text-sm font-bold">
+                    {settings.nickname.charAt(0).toUpperCase()}
+                  </div>
+                )}
+              </div>
+              <label className="cursor-pointer rounded bg-[#5865f2] px-3 py-1.5 text-xs font-medium text-white transition hover:bg-[#4752c4]">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                      settings.setAvatarUrl(reader.result as string);
+                    };
+                    reader.readAsDataURL(file);
+                  }}
+                  className="hidden"
+                />
+                Trocar foto
+              </label>
+            </div>
+            <p className="mt-1 text-[11px] leading-relaxed text-[#949ba4]">
+              A foto é salva localmente e compartilhada com os usuários da sala.
+            </p>
+          </section>
+
           <section className="rounded-lg bg-[#2b2d31] p-4">
             <div className="mb-2 flex items-center justify-between">
               <span className="text-xs font-semibold text-[#949ba4]">Teste de microfone</span>

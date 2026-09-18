@@ -6,6 +6,7 @@ import { randomUUID } from 'node:crypto';
 
 interface LiveUser extends User {
   socketId: string;
+  avatarUrl?: string;
 }
 
 interface RoomSession {
@@ -75,6 +76,7 @@ export class RoomManager {
       sharingScreen: false,
       joinTime: Date.now(),
       socketId: socket.id,
+      avatarUrl: undefined,
     };
 
     let session = this.sessions.get(roomId);
@@ -196,6 +198,35 @@ export class RoomManager {
       .emit(ServerEvent.signaling, { targetUserId: socket.data.userId, signal: payload.signal });
   }
 
+  sendChatMessage(socket: Socket, text: string): void {
+    const userId = socket.data.userId as string | undefined;
+    const roomId = socket.data.roomId as string | undefined;
+    if (!userId || !roomId) return;
+    const session = this.sessions.get(roomId);
+    if (!session) return;
+    const user = session.users.get(userId);
+    if (!user) return;
+    this.io.to(roomId).emit(ServerEvent.chatMessage, {
+      userId: user.id,
+      nickname: user.nickname,
+      avatarUrl: user.avatarUrl,
+      text,
+      timestamp: Date.now(),
+    });
+  }
+
+  setAvatar(socket: Socket, avatarUrl: string): void {
+    const userId = socket.data.userId as string | undefined;
+    const roomId = socket.data.roomId as string | undefined;
+    if (!userId || !roomId) return;
+    const session = this.sessions.get(roomId);
+    if (!session) return;
+    const user = session.users.get(userId);
+    if (!user) return;
+    user.avatarUrl = avatarUrl;
+    this.io.to(roomId).emit(ServerEvent.userJoined, this.toUser(user));
+  }
+
   private currentUserCount(roomId: string): number {
     const session = this.sessions.get(roomId);
     if (session) return session.users.size;
@@ -214,6 +245,7 @@ export class RoomManager {
       muted: u.muted,
       sharingScreen: u.sharingScreen,
       joinTime: u.joinTime,
+      avatarUrl: u.avatarUrl,
     };
   }
 }
@@ -242,6 +274,14 @@ export function registerSocketHandlers(io: Server, manager: RoomManager): void {
 
     socket.on(ClientEvent.signaling, (payload: { targetUserId: string; signal: unknown }) => {
       manager.relaySignal(socket, payload);
+    });
+
+    socket.on(ClientEvent.chatMessage, (payload: { text: string }) => {
+      manager.sendChatMessage(socket, payload.text);
+    });
+
+    socket.on(ClientEvent.setAvatar, (payload: { avatarUrl: string }) => {
+      manager.setAvatar(socket, payload.avatarUrl);
     });
 
     socket.on(ClientEvent.leaveRoom, () => manager.leaveRoom(socket));
