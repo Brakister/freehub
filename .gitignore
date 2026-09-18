@@ -3,6 +3,7 @@ dist/
 build/
 data/
 release/
+!release/latest.yml
 .cache/
 *.tsbuildinfo
 .env
