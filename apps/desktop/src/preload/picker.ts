@@ -1,15 +1,13 @@
 import { contextBridge, ipcRenderer } from 'electron';
-
-export interface PickerSource {
-  id: string;
-  name: string;
-  thumbnail: string;
-}
+import { IPC } from '../shared/ipc';
+import type { PickerAudioApp, PickerChoice, PickerData } from '../shared/picker';
 
 const api = {
-  list: (): Promise<PickerSource[]> => ipcRenderer.invoke('picker:list'),
-  select: (id: string): void => ipcRenderer.send('picker:select', id),
-  cancel: (): void => ipcRenderer.send('picker:cancel'),
+  list: (): Promise<PickerData> => ipcRenderer.invoke(IPC.pickerList),
+  audioApps: (): Promise<PickerAudioApp[]> =>
+    ipcRenderer.invoke(IPC.pickerAudioApps),
+  choose: (choice: PickerChoice | null): void =>
+    ipcRenderer.send(IPC.pickerChoose, choice),
 };
 
 contextBridge.exposeInMainWorld('pickerApi', api);

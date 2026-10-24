@@ -11,6 +11,7 @@ export const ClientEvent = {
   ping: 'ping',
   chatMessage: 'chat:message',
   setAvatar: 'set-avatar',
+  updateProfile: 'user:update-profile',
 } as const;
 
 export type ClientEvent = (typeof ClientEvent)[keyof typeof ClientEvent];
@@ -23,6 +24,7 @@ export const ServerEvent = {
   roomFull: 'room:full',
   roomNotFound: 'room:not-found',
   userJoined: 'user:joined',
+  userUpdated: 'user:updated',
   userLeft: 'user:left',
   userMuted: 'user:muted',
   screenShared: 'screen:shared',

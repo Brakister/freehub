@@ -37,6 +37,9 @@ export class VoiceSession {
     this.rawStream = await getMicrophoneStream(this.inputDeviceId || undefined);
     this.volume = new VolumeController();
     this.processedStream = this.volume.applyMicGain(this.rawStream, 1);
+    this.processedStream.getAudioTracks().forEach((track) => {
+      track.contentHint = 'speech';
+    });
     this.peers.setLocalStream(this.processedStream);
   }
 

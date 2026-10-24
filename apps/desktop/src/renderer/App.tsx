@@ -5,6 +5,10 @@ import { getSocket } from './net/socket';
 import { useConnectionStore, type RoomInfo } from './stores/useConnectionStore';
 import { VoiceSession } from './voice/session';
 import { applyOutputToElements, registerAudioElement } from './voice/output';
+import {
+  createSystemAudioTrack,
+  type SystemAudioTrackHandle,
+} from './voice/systemAudioTrack';
 import { UpdateBanner } from './components/UpdateBanner';
 
 function ConnectionBanner({ status }: { status: string }): React.JSX.Element {
@@ -159,7 +163,6 @@ function ScreenShareCard({
   showStop,
   onStop,
   muted,
-  miniUsers = [],
   volume,
   onVolumeChange,
 }: {
@@ -168,7 +171,6 @@ function ScreenShareCard({
   showStop: boolean;
   onStop?: () => void;
   muted: boolean;
-  miniUsers?: VoiceUserView[];
   volume?: number;
   onVolumeChange?: (volume: number) => void;
 }): React.JSX.Element | null {
@@ -260,24 +262,6 @@ function ScreenShareCard({
             </div>
           </div>
         </div>
-        {miniUsers.length > 0 && (
-          <div className="absolute inset-x-0 bottom-4 z-10 flex items-end justify-center gap-3 px-6">
-            {miniUsers.map((u) => (
-              <div key={u.id} className="flex w-20 flex-col items-center gap-1">
-                <span
-                  className={`flex h-11 w-11 items-center justify-center rounded-full text-sm font-bold text-white ${
-                    u.speaking ? 'ring-2 ring-[#3ba55c]' : 'ring-1 ring-white/40'
-                  } ${u.isSelf ? 'bg-[#5865f2]' : 'bg-[#41434a]'}`}
-                >
-                  {u.nickname.charAt(0).toUpperCase()}
-                </span>
-                <span className="max-w-full truncate text-[11px] font-medium text-white drop-shadow">
-                  {u.nickname}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
     );
   }
@@ -360,6 +344,7 @@ export default function App(): React.JSX.Element {
 
   const sessionRef = useRef<VoiceSession | null>(null);
   const screenStreamRef = useRef<MediaStream | null>(null);
+  const systemAudioRef = useRef<SystemAudioTrackHandle | null>(null);
   const [micError, setMicError] = useState<string | null>(null);
   const [shareError, setShareError] = useState<string | null>(null);
   const [shareNotice, setShareNotice] = useState<{
@@ -408,6 +393,11 @@ export default function App(): React.JSX.Element {
    const handleLeaveRoom = (): void => {
      setShareNotice(null);
      setShareRequestedBy(null);
+     systemAudioRef.current?.dispose();
+     systemAudioRef.current = null;
+     window.electronAPI?.systemAudio.stop();
+     screenStreamRef.current?.getTracks().forEach((track) => track.stop());
+     screenStreamRef.current = null;
      void sessionRef.current?.dispose();
      sessionRef.current = null;
      useConnectionStore.getState().leaveRoom();
@@ -419,14 +409,33 @@ export default function App(): React.JSX.Element {
      socket.emit(ClientEvent.chatMessage, { text });
    }, []);
 
+  const stopScreenShare = useCallback(
+    async (notifyServer: boolean): Promise<void> => {
+      systemAudioRef.current?.dispose();
+      systemAudioRef.current = null;
+      window.electronAPI?.systemAudio.stop();
+
+      const session = sessionRef.current;
+      if (session) {
+        try {
+          await session.unpublishScreenShare();
+        } catch {
+          // A conexão pode já ter caído; as trilhas locais ainda param abaixo.
+        }
+      }
+
+      screenStreamRef.current?.getTracks().forEach((track) => track.stop());
+      screenStreamRef.current = null;
+      if (notifyServer) getSocket().emit(ClientEvent.stopScreenShare);
+    },
+    [],
+  );
+
   const handleToggleScreenShare = async (): Promise<void> => {
     const session = sessionRef.current;
     if (!session) return;
     if (screenshare?.userId === selfId) {
-      await session.unpublishScreenShare();
-      screenStreamRef.current?.getTracks().forEach((t) => t.stop());
-      screenStreamRef.current = null;
-      getSocket().emit(ClientEvent.stopScreenShare);
+      await stopScreenShare(true);
       return;
     }
     if (screenshare?.userId) {
@@ -439,26 +448,75 @@ export default function App(): React.JSX.Element {
       setShareError(null);
       return;
     }
+
+    let usedNativeAudio = false;
+    if (window.electronAPI?.systemAudio) {
+      try {
+        usedNativeAudio = await window.electronAPI.systemAudio.start({
+          enabled: captureSystemAudio,
+        });
+      } catch {
+        usedNativeAudio = false;
+      }
+    }
+
+    let stream: MediaStream | null = null;
     try {
       const quality =
         SCREEN_QUALITIES.find((q) => q.id === screenQualityId) ??
         SCREEN_QUALITIES.find((q) => q.id === DEFAULT_SCREEN_QUALITY_ID) ??
         SCREEN_QUALITIES[0];
-      const stream = await navigator.mediaDevices.getDisplayMedia({
+      stream = await navigator.mediaDevices.getDisplayMedia({
         video: {
           width: { ideal: quality.width },
           height: { ideal: quality.height },
           frameRate: { ideal: quality.frameRate },
         },
-        audio: captureSystemAudio
-          ? ({ suppressLocalAudioPlayback: true } as MediaTrackConstraints)
-          : false,
+        // Com a captura nativa ativa, o áudio é anexado depois como PCM.
+        // Sem ela, o loopback do Electron é o plano B.
+        audio: usedNativeAudio
+          ? false
+          : captureSystemAudio
+            ? ({ suppressLocalAudioPlayback: true } as MediaTrackConstraints)
+            : false,
       });
+
+      const videoTrack = stream.getVideoTracks()[0];
+      if (videoTrack) videoTrack.contentHint = 'detail';
+
+      if (usedNativeAudio && window.electronAPI?.systemAudio) {
+        const state = await window.electronAPI.systemAudio.getState();
+        useSettings.getState().setCaptureSystemAudio(state.enabled);
+        if (state.active && state.enabled) {
+          const handle = await createSystemAudioTrack();
+          if (handle) {
+            systemAudioRef.current = handle;
+            stream.addTrack(handle.track);
+          }
+        } else {
+          window.electronAPI.systemAudio.stop();
+        }
+      }
+
+      stream.getVideoTracks()[0]?.addEventListener(
+        'ended',
+        () => {
+          // O usuário encerrou a captura pela barra do Windows.
+          void stopScreenShare(true);
+        },
+        { once: true },
+      );
+
       await session.publishScreenShare(stream);
       screenStreamRef.current = stream;
       setShareError(null);
       getSocket().emit(ClientEvent.startScreenShare);
     } catch (err) {
+      stream?.getTracks().forEach((track) => track.stop());
+      systemAudioRef.current?.dispose();
+      systemAudioRef.current = null;
+      window.electronAPI?.systemAudio.stop();
+
       // Usuário cancelou a seleção de tela ou houve falha de captura.
       const name = err instanceof Error ? err.name : '';
       if (name === 'NotAllowedError' || name === 'AbortError') {
@@ -517,6 +575,9 @@ export default function App(): React.JSX.Element {
     const onUserJoined = (p: Payload): void => {
       useConnectionStore.getState().addUser(p as User);
     };
+    const onUserUpdated = (p: Payload): void => {
+      useConnectionStore.getState().updateUser(p as User);
+    };
     const onUserLeft = (p: Payload): void => {
       const userId = (p as { userId: string }).userId;
       useConnectionStore.getState().removeUser(userId);
@@ -573,6 +634,7 @@ export default function App(): React.JSX.Element {
       [ServerEvent.roomCreated, onRoomCreated],
       [ServerEvent.roomJoined, onRoomJoined],
       [ServerEvent.userJoined, onUserJoined],
+      [ServerEvent.userUpdated, onUserUpdated],
       [ServerEvent.userLeft, onUserLeft],
       [ServerEvent.userMuted, onUserMuted],
       [ServerEvent.screenShared, onScreenShared],
@@ -618,6 +680,12 @@ export default function App(): React.JSX.Element {
     applyOutputToElements(outputDeviceId);
   }, [outputDeviceId]);
 
+  // Mantém a preferência do painel de configurações alinhada com a escolha
+  // que o seletor de tela salva no processo principal.
+  useEffect(() => {
+    void window.electronAPI?.systemAudio.setEnabled(captureSystemAudio);
+  }, [captureSystemAudio]);
+
   const prevInputRef = useRef(inputDeviceId);
   useEffect(() => {
     const prev = prevInputRef.current;
@@ -637,11 +705,13 @@ export default function App(): React.JSX.Element {
   }, [inputDeviceId, ensureSession, micGain, speakerVolume]);
 
   useEffect(() => {
-    if (!avatarUrl || !useConnectionStore.getState().room) return;
+    const state = useConnectionStore.getState();
+    if (!state.room || !state.selfId || !state.connected) return;
     const socket = getSocket();
     if (!socket.connected) return;
-    socket.emit(ClientEvent.setAvatar, { avatarUrl });
-  }, [avatarUrl]);
+    socket.emit(ClientEvent.updateProfile, { nickname, avatarUrl });
+    if (avatarUrl) socket.emit(ClientEvent.setAvatar, { avatarUrl });
+  }, [avatarUrl, nickname, room?.id, selfId, connected]);
 
   const voiceUsers: VoiceUserView[] = useMemo(
     () => users.map((u) => ({ ...u, speaking: speaking[u.id] ?? false, isSelf: u.id === selfId })),
@@ -727,7 +797,6 @@ export default function App(): React.JSX.Element {
                   showStop
                   onStop={() => void handleToggleScreenShare()}
                   muted
-                  miniUsers={voiceUsers}
                 />
               ) : (
                 <ScreenShareCard
@@ -738,7 +807,6 @@ export default function App(): React.JSX.Element {
                   }
                   showStop={false}
                   muted={false}
-                  miniUsers={voiceUsers}
                   volume={screenShareVolume}
                   onVolumeChange={setScreenShareVolume}
                 />

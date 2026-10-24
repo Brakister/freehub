@@ -215,7 +215,7 @@ export class RoomManager {
     });
   }
 
-  setAvatar(socket: Socket, avatarUrl: string): void {
+  updateProfile(socket: Socket, profile: { nickname?: string; avatarUrl?: string }): void {
     const userId = socket.data.userId as string | undefined;
     const roomId = socket.data.roomId as string | undefined;
     if (!userId || !roomId) return;
@@ -223,8 +223,12 @@ export class RoomManager {
     if (!session) return;
     const user = session.users.get(userId);
     if (!user) return;
-    user.avatarUrl = avatarUrl;
-    this.io.to(roomId).emit(ServerEvent.userJoined, this.toUser(user));
+    if (typeof profile.nickname === 'string') {
+      const nickname = profile.nickname.trim().slice(0, 24);
+      if (nickname) user.nickname = nickname;
+    }
+    if (typeof profile.avatarUrl === 'string') user.avatarUrl = profile.avatarUrl;
+    this.io.to(roomId).emit(ServerEvent.userUpdated, this.toUser(user));
   }
 
   private currentUserCount(roomId: string): number {
@@ -280,8 +284,8 @@ export function registerSocketHandlers(io: Server, manager: RoomManager): void {
       manager.sendChatMessage(socket, payload.text);
     });
 
-    socket.on(ClientEvent.setAvatar, (payload: { avatarUrl: string }) => {
-      manager.setAvatar(socket, payload.avatarUrl);
+    socket.on(ClientEvent.updateProfile, (payload: { nickname?: string; avatarUrl?: string }) => {
+      manager.updateProfile(socket, payload ?? {});
     });
 
     socket.on(ClientEvent.leaveRoom, () => manager.leaveRoom(socket));

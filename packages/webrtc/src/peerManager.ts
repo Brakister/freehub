@@ -19,6 +19,8 @@ interface PeerEntry {
   voiceDetectorStarted: boolean;
   negotiating: boolean;
   pendingRenegotiation: boolean;
+  /** A oferta inicial já reservou as m-lines de vídeo/som da tela. */
+  screenLinesReserved: boolean;
 }
 
 /**
@@ -35,6 +37,10 @@ export class PeerManager {
   /** Define o stream de microfone local (deve ser chamado antes de createPeer). */
   setLocalStream(stream: MediaStream): void {
     this.localStream = stream;
+    // Ajuda o Opus a tratar a trilha como fala (FEC/DTX e menos bitrate).
+    for (const track of stream.getAudioTracks()) {
+      if (!track.contentHint) track.contentHint = 'speech';
+    }
   }
 
   /** Define o stream de tela para que novos peers recebam as tracks automaticamente. */
@@ -59,6 +65,7 @@ export class PeerManager {
       voiceDetectorStarted: false,
       negotiating: false,
       pendingRenegotiation: false,
+      screenLinesReserved: false,
     };
     this.peers.set(userId, entry);
 
@@ -72,6 +79,9 @@ export class PeerManager {
         pc.addTrack(track, this.screenStream);
       }
     }
+    // Reaplica os limites em todos os peers: com mais gente na sala, o video
+    // de cada conexao precisa ceder CPU/banda para a voz.
+    this.reconfigureAllMediaPriorities();
 
     pc.onicecandidate = (e) => {
       if (e.candidate) {
@@ -145,12 +155,40 @@ export class PeerManager {
     const entry = this.peers.get(userId);
     if (!entry) return;
     try {
+      this.reserveScreenMediaLines(pc, entry);
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
       this.callbacks.sendSignal(userId, { type: 'offer', sdp: offer.sdp });
     } catch (err) {
       console.error('[peer] failed to create offer:', err);
     }
+  }
+
+  /**
+   * Reserva, na primeira oferta, as m-lines de vídeo e de som da tela.
+   *
+   * Sem isso, quem entra numa sala onde já existe transmissão oferece apenas
+   * o microfone. O WebRTC não deixa a resposta criar m-lines novas, então o
+   * sharer não tem onde colocar o vídeo/áudio da tela e o recém-chegado fica
+   * com a tela preta até uma renegociação. Reservar as m-lines desde o início
+   * faz a tela chegar junto com a conexão, sem botão de "assistir".
+   *
+   * A primeira m-line de áudio pertence à voz; a segunda fica para o áudio
+   * da tela. O vídeo tem a sua própria m-line.
+   */
+  private reserveScreenMediaLines(pc: RTCPeerConnection, entry: PeerEntry): void {
+    if (entry.screenLinesReserved) return;
+    const transceivers = pc.getTransceivers();
+    const hasVideo = transceivers.some((t) => t.receiver.track.kind === 'video');
+    const audioCount = transceivers.filter(
+      (t) => t.receiver.track.kind === 'audio',
+    ).length;
+
+    if (!hasVideo) pc.addTransceiver('video', { direction: 'recvonly' });
+    for (let i = audioCount; i < 2; i += 1) {
+      pc.addTransceiver('audio', { direction: 'recvonly' });
+    }
+    entry.screenLinesReserved = true;
   }
 
   /**
@@ -166,6 +204,18 @@ export class PeerManager {
         entry.screenTracks.add(track);
         entry.pc.addTrack(track, stream);
       }
+      // Se a track caiu numa m-line reservada como recvonly, libera o envio.
+      for (const transceiver of entry.pc.getTransceivers()) {
+        const track = transceiver.sender.track;
+        if (!track || !entry.screenTracks.has(track)) continue;
+        if (
+          transceiver.direction === 'recvonly' ||
+          transceiver.direction === 'inactive'
+        ) {
+          transceiver.direction = 'sendrecv';
+        }
+      }
+      this.configureMediaPriorities(entry.pc, entry.screenTracks);
     }
     for (const [userId, entry] of this.peers) {
       if (!entry.negotiating) {
@@ -224,12 +274,75 @@ export class PeerManager {
     return [...this.peers.keys()];
   }
 
+  private reconfigureAllMediaPriorities(): void {
+    for (const entry of this.peers.values()) {
+      this.configureMediaPriorities(entry.pc, entry.screenTracks);
+    }
+  }
+
+  private configureMediaPriorities(
+    pc: RTCPeerConnection,
+    screenTracks: Set<MediaStreamTrack>,
+  ): void {
+    const peerCount = this.peers.size;
+    // Em malha, cada peer recebe uma copia do video. A partir de dois
+    // espectadores, 30 FPS ja basta e evita que o encoder de video sufoque
+    // o audio; com tres ou mais, limita a largura para 1280 px.
+    const capFrameRate = peerCount >= 2 ? 30 : undefined;
+    const maxWidth = peerCount >= 3 ? 1280 : undefined;
+
+    for (const sender of pc.getSenders()) {
+      if (!sender.track) continue;
+      const parameters = sender.getParameters();
+      const encoding = parameters.encodings?.[0] ?? {};
+
+      if (sender.track.kind === 'audio') {
+        // Voz e som do sistema vao com prioridade alta; o teto de bitrate
+        // impede que o som da tela dispute banda com o microfone.
+        encoding.priority = 'high';
+        encoding.networkPriority = 'high';
+        encoding.maxBitrate = screenTracks.has(sender.track) ? 128_000 : 64_000;
+      } else if (sender.track.kind === 'video') {
+        const settings = sender.track.getSettings();
+        const width = settings.width ?? 1920;
+        const height = settings.height ?? 1080;
+        const sourceFps =
+          settings.frameRate && settings.frameRate > 0 ? settings.frameRate : 30;
+        const targetFps = capFrameRate ? Math.min(sourceFps, capFrameRate) : sourceFps;
+
+        encoding.priority = 'low';
+        encoding.networkPriority = 'low';
+        encoding.maxBitrate = Math.min(
+          2_500_000,
+          Math.max(800_000, Math.round(width * height * targetFps * 0.05)),
+        );
+
+        if (capFrameRate && sourceFps > capFrameRate) {
+          encoding.maxFramerate = capFrameRate;
+        } else {
+          delete encoding.maxFramerate;
+        }
+
+        if (maxWidth && width > maxWidth) {
+          encoding.scaleResolutionDownBy = Math.ceil(width / maxWidth);
+        } else {
+          delete encoding.scaleResolutionDownBy;
+        }
+      }
+
+      parameters.encodings = [encoding];
+      void sender.setParameters(parameters).catch(() => undefined);
+    }
+  }
+
   removePeer(userId: string): void {
     const entry = this.peers.get(userId);
     if (!entry) return;
     entry.stopDetector();
     entry.pc.close();
     this.peers.delete(userId);
+    // Sobrou menos gente: os peers restantes podem voltar a receber mais fps.
+    if (this.peers.size > 0) this.reconfigureAllMediaPriorities();
   }
 
   closeAll(): void {

@@ -181,8 +181,9 @@ export function SettingsModal(props: SettingsModalProps): React.JSX.Element | nu
               ))}
             </select>
             <p className="mt-1 text-[11px] leading-relaxed text-[#949ba4]">
-              Quanto maior a qualidade, mais internet de upload consome. Se o som do sistema não sair,
-              marque a caixa que inclui o áudio do sistema na seleção de tela.
+              Quanto maior a qualidade, mais internet de upload e CPU consome. Em salas com várias
+              pessoas, 720p30 evita que a voz fique picotada. Se o som do sistema não sair, marque a
+              caixa que inclui o áudio do sistema na seleção de tela.
             </p>
           </section>
 
@@ -207,7 +208,7 @@ export function SettingsModal(props: SettingsModalProps): React.JSX.Element | nu
             </label>
             <p className="mt-1 text-[11px] leading-relaxed text-[#949ba4]">
               {settings.captureSystemAudio
-                ? 'Áudio do sistema será capturado (jogos, vídeos, etc). Nota: áudio de chamadas como Discord também pode ser capturado.'
+                ? 'O som do computador entra na transmissão. No seletor de tela você pode desmarcar apps específicos (por exemplo, o Discord) para que só eles fiquem de fora. O áudio do próprio Freehub nunca é capturado.'
                 : 'Apenas o vídeo da tela será transmitido, sem áudio do sistema.'}
             </p>
           </section>

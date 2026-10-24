@@ -24,4 +24,4 @@ export const SCREEN_QUALITIES: ScreenQualityOption[] = [
   { id: '4k60', label: '4K · 60 FPS', width: 3840, height: 2160, frameRate: 60 },
 ];
 
-export const DEFAULT_SCREEN_QUALITY_ID = '1080p60';
+export const DEFAULT_SCREEN_QUALITY_ID = '720p30';

@@ -9,7 +9,7 @@ export class VolumeController {
   private micGain: GainNode | null = null;
 
   constructor() {
-    this.ctx = new AudioContext();
+    this.ctx = new AudioContext({ sampleRate: 48000, latencyHint: 'interactive' });
     this.masterGain = this.ctx.createGain();
     this.masterGain.connect(this.ctx.destination);
   }
@@ -30,6 +30,9 @@ export class VolumeController {
     this.micGain.gain.value = clamp(gain, 0, 2);
     source.connect(this.micGain);
     const dest = this.ctx.createMediaStreamDestination();
+    // Mantem a voz em mono; o upmix para estereo so aumentaria o bitrate.
+    dest.channelCount = 1;
+    dest.channelCountMode = 'explicit';
     this.micGain.connect(dest);
     return dest.stream;
   }

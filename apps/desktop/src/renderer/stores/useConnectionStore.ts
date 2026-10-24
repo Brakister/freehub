@@ -30,6 +30,7 @@ interface ConnectionState {
   applyRoomCreated(selfId: string, room: RoomInfo, nickname: string): void;
   applyRoomJoined(payload: RoomState & { selfId: string }): void;
   addUser(user: User): void;
+  updateUser(user: User): void;
   removeUser(userId: string): void;
   updateUserMuted(userId: string, muted: boolean): void;
   setScreenshare(info: ScreenshareInfo | null): void;
@@ -91,6 +92,8 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
     }),
 
   addUser: (user) => set((s) => ({ users: [...s.users.filter((u) => u.id !== user.id), user] })),
+  updateUser: (user) =>
+    set((s) => ({ users: s.users.map((current) => (current.id === user.id ? user : current)) })),
   removeUser: (userId) =>
     set((s) => {
       const speaking = { ...s.speaking };

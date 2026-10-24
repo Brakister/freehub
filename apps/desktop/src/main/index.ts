@@ -6,6 +6,12 @@ import { registerUpdater, setupUpdaterIpc } from './updater';
 import { APP_NAME } from './constants';
 import { startServer } from './server';
 import { pickDesktopSource } from './displayPicker';
+import {
+  isSystemAudioCapturing,
+  registerSystemAudioIpc,
+  stopSystemAudioCapture,
+} from './systemAudio';
+import { getSystemAudioSettings } from './audioSettings';
 
 const isSmokeTest = process.env.FREEHUB_SMOKE === '1';
 
@@ -32,7 +38,10 @@ function createWindow(): BrowserWindow {
 
   if (isDev && !isSmokeTest) {
     mainWindow.loadURL('http://localhost:5173');
-    mainWindow.webContents.openDevTools({ mode: 'detach' });
+    // DevTools so abre quando pedido explicitamente (FREEHUB_DEVTOOLS=1).
+    if (process.env.FREEHUB_DEVTOOLS === '1') {
+      mainWindow.webContents.openDevTools({ mode: 'detach' });
+    }
   } else {
     mainWindow
       .loadFile(join(__dirname, '../renderer/index.html'))
@@ -81,14 +90,25 @@ app.whenReady().then(() => {
   Menu.setApplicationMenu(null);
   registerUpdater();
   setupUpdaterIpc();
+  registerSystemAudioIpc();
 
   // Sem este handler o Electron rejeita navigator.mediaDevices.getDisplayMedia.
   session.defaultSession.setDisplayMediaRequestHandler((_request, callback) => {
-    void pickDesktopSource().then((source) => {
-      if (source) {
-        callback({ video: source, audio: 'loopback' });
-      } else {
+    void pickDesktopSource().then((picked) => {
+      if (!picked) {
         callback({});
+        return;
+      }
+
+      // A captura nativa já deixa o som do Freehub de fora. Quando ela está
+      // rodando, o Electron não deve anexar o loopback padrão à mesma
+      // transmissão. Sem o helper, o loopback é o plano B.
+      const nativeAudio = isSystemAudioCapturing();
+      const wantsAudio = getSystemAudioSettings().enabled;
+      if (nativeAudio || !wantsAudio) {
+        callback({ video: picked.source });
+      } else {
+        callback({ video: picked.source, audio: 'loopback' });
       }
     });
   });
@@ -104,6 +124,10 @@ app.whenReady().then(() => {
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
+});
+
+app.on('before-quit', () => {
+  stopSystemAudioCapture();
 });
 
 // Exposição de metadados para o renderer.

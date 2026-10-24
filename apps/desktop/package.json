@@ -1,19 +1,20 @@
 {
   "name": "@freehub/desktop",
-  "version": "1.3.2",
+  "version": "1.4.0",
   "private": true,
   "description": "Freehub - voz estilo Discord: servidor Socket.IO + WebRTC mesh + desktop.",
   "author": "Brakister <112033842+brakister@users.noreply.github.com>",
   "main": "dist/main/index.js",
   "scripts": {
+    "build:native": "powershell -ExecutionPolicy Bypass -File native/build.ps1",
     "dev": "vite",
     "typecheck": "tsc -p tsconfig.main.json --noEmit && tsc -p tsconfig.renderer.json --noEmit",
-    "build": "tsc -p tsconfig.main.json && vite build",
+    "build": "npm run build:native && tsc -p tsconfig.main.json && vite build",
     "preview": "vite preview",
-    "electron:dev": "concurrently -k \"vite\" \"tsc -w -p tsconfig.main.json\" \"wait-on dist/main/index.js && electron .\"",
+    "electron:dev": "npm run build:native && concurrently -k \"vite\" \"tsc -w -p tsconfig.main.json\" \"wait-on dist/main/index.js && electron .\"",
     "electron:build": "npm run build && electron-builder"
   },
-"dependencies": {
+  "dependencies": {
     "electron-updater": "^6.3.9",
     "express": "^4.21.0",
     "socket.io": "^4.8.0",

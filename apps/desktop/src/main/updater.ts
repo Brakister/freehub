@@ -1,6 +1,6 @@
 import { app, ipcMain, BrowserWindow } from 'electron';
 import { autoUpdater, type UpdateInfo } from 'electron-updater';
-import { GITHUB_OWNER, GITHUB_REPO, UPDATE_SERVER_URL } from './constants';
+import { GITHUB_OWNER, GITHUB_REPO } from './constants';
 
 let configured = false;
 
@@ -20,13 +20,10 @@ function configure(): void {
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
 
-  if (
-    process.env.UPDATE_SERVER_URL ||
-    UPDATE_SERVER_URL !== 'https://updates.example.com/freehub'
-  ) {
+  if (process.env.UPDATE_SERVER_URL) {
     autoUpdater.setFeedURL({
       provider: 'generic',
-      url: process.env.UPDATE_SERVER_URL ?? UPDATE_SERVER_URL,
+      url: process.env.UPDATE_SERVER_URL,
     });
   } else {
     autoUpdater.setFeedURL({

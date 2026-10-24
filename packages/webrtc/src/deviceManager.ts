@@ -41,10 +41,17 @@ export async function enumerateAudioDevices(): Promise<MediaDevices> {
 
 /** Cria um stream a partir do dispositivo de microfone selecionado. */
 export async function getMicrophoneStream(deviceId?: string): Promise<MediaStream> {
-  const constraints: MediaStreamConstraints = deviceId
-    ? { audio: { deviceId: { exact: deviceId }, echoCancellation: true, noiseSuppression: true, autoGainControl: true } }
-    : { audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } };
-  return navigator.mediaDevices.getUserMedia(constraints);
+  // Voz em mono 48 kHz: evita upmix para estereo e resampling desnecessario,
+  // reduzindo banda e carga de CPU no encoder de audio.
+  const audio: MediaTrackConstraints = {
+    echoCancellation: true,
+    noiseSuppression: true,
+    autoGainControl: true,
+    channelCount: { ideal: 1 },
+    sampleRate: { ideal: 48000 },
+  };
+  if (deviceId) audio.deviceId = { exact: deviceId };
+  return navigator.mediaDevices.getUserMedia({ audio });
 }
 
 /** Setter para dispositivos de saída suportados (Chrome/Edge). */

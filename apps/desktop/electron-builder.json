@@ -9,8 +9,15 @@
   "asar": true,
   "asarUnpack": ["node_modules/sql.js/**/*"],
   "win": {
-    "target": ["zip"],
+    "target": ["nsis", "zip"],
+    "artifactName": "Freehub-Setup-${version}.${ext}",
     "signAndEditExecutable": false,
+    "extraResources": [
+      {
+        "from": "native/bin/freehub-capture.exe",
+        "to": "freehub-capture.exe"
+      }
+    ],
     "publish": [
       {
         "provider": "github",

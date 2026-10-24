@@ -10,3 +10,6 @@ release/
 .env.local
 .DS_Store
 Thumbs.db
+
+# Binário nativo gerado por `npm run build:native`.
+apps/desktop/native/bin/
